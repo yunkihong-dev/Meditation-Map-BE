@@ -1,0 +1,10 @@
+.git
+.gitignore
+.idea
+*.iml
+build
+.gradle
+out
+bin
+**/.DS_Store
+docker-compose.yml

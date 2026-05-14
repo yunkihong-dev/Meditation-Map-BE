@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: meditation-map-be
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true
+    username: meditation
+    password: meditation
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cache:
+    type: redis
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope: openid, profile, email
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:}
+            client-secret: ${KAKAO_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - profile_nickname
+              - account_email
+              - phone_number
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 30MB
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-to-a-very-long-secret-key-for-hs256-min-256-bits-please-change-in-prod}
+    expiration-ms: 86400000
+
+  storage:
+    minio:
+      enabled: false
+      endpoint: http://127.0.0.1:9000
+      access-key: minio
+      secret-key: minio12345
+      bucket: meditation-media
+      public-base-url: http://localhost:9000
+
+  cors:
+    # 주소 표시줄이 http://127.0.0.1:3000 인 경우 Origin 이 달라지므로 둘 다 넣어둠
+    allowed-origins: http://localhost:3000,http://127.0.0.1:3000
+
+  oauth2:
+    # OAuth 성공 후 리다이렉트: 프론트가 accessToken·email 쿼리를 처리하는 경로와 맞춥니다.
+    frontend-callback-url: ${OAUTH2_FRONTEND_CALLBACK_URL:http://localhost:3000/auth/oauth}
+
+  cache:
+    default-ttl-seconds: 600
+
+logging:
+  level:
+    org.springframework.security: INFO

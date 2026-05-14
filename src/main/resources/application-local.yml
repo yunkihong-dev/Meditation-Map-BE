@@ -1,0 +1,19 @@
+# 로컬에서 Docker MySQL(호스트 포트 3307) + MinIO(9000) 사용 시:
+#   docker compose up -d
+#   ./gradlew bootRun --args='--spring.profiles.active=local'
+#
+# local 프로필은 인메모리 캐시(LocalCacheConfig)를 쓰므로 Redis 없이도 기동 가능합니다.
+# (Redis 캐시에 남은 예전 포맷 데이터가 역직렬화 오류를 내는 것을 피하기 위함)
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3307/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul
+
+app:
+  storage:
+    minio:
+      enabled: true

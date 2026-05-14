@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: jdbc:mysql://mysql:3306/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul
+    username: meditation
+    password: meditation
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  # compose에서 GOOGLE_/KAKAO_ 미지정 시에도 검증 통과(실제 로그인은 키 주입 필요)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:docker-dev-placeholder}
+            client-secret: ${GOOGLE_CLIENT_SECRET:docker-dev-placeholder}
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:docker-dev-placeholder}
+            client-secret: ${KAKAO_CLIENT_SECRET:docker-dev-placeholder}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  storage:
+    minio:
+      enabled: true
+      endpoint: http://minio:9000
+      access-key: minio
+      secret-key: minio12345
+      bucket: meditation-media
+      # 브라우저에서 접근 가능한 호스트 URL(포트 포워딩 시 로컬은 localhost)
+      public-base-url: ${MINIO_PUBLIC_BASE_URL:http://localhost:9000}
