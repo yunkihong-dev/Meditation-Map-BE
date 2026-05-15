@@ -68,8 +68,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 return;
             }
 
-            String phoneDigits =
-                    normalizeKrMobileDigits(resolvePhone(oauthToken.getPrincipal(), registrationId));
             String ticket =
                     jwtService.createOAuthSignupTicket(
                             emailNormalized, registrationId, subject);
@@ -79,9 +77,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                             + "?oauthSignupTicket="
                             + URLEncoder.encode(ticket, StandardCharsets.UTF_8)
                             + "&email="
-                            + URLEncoder.encode(emailNormalized, StandardCharsets.UTF_8)
-                            + "&phone="
-                            + URLEncoder.encode(phoneDigits, StandardCharsets.UTF_8);
+                            + URLEncoder.encode(emailNormalized, StandardCharsets.UTF_8);
 
             getRedirectStrategy().sendRedirect(request, response, url);
         } catch (IllegalArgumentException ex) {
@@ -91,17 +87,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private String withQuery(String key, String value) {
         return frontendCallbackUrl + "?" + key + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
-
-    private static String normalizeKrMobileDigits(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "";
-        }
-        String d = raw.replaceAll("\\D", "");
-        if (d.startsWith("82") && d.length() >= 11) {
-            d = "0" + d.substring(2);
-        }
-        return d;
     }
 
     private static String resolveOauthSubject(Object principal, String registrationId) {
@@ -140,22 +125,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             return email != null ? String.valueOf(email) : null;
         }
         return null;
-    }
-
-    /** 카카오 동의 시에만 채워짐(`phone_number` 스코프). */
-    private static String resolvePhone(Object principal, String registrationId) {
-        if (!(principal instanceof OAuth2User user)) {
-            return "";
-        }
-        if (!"kakao".equals(registrationId)) {
-            return "";
-        }
-        Object accountObj = user.getAttribute("kakao_account");
-        if (!(accountObj instanceof Map<?, ?> account)) {
-            return "";
-        }
-        Object phone = account.get("phone_number");
-        return phone != null ? String.valueOf(phone) : "";
     }
 
     private static String syntheticEmail(String registrationId, String subject) {
