@@ -1,62 +1,82 @@
+# Spring Boot + Docker Compose 배포
+# - CI: Gradle 빌드 + docker compose build app 로 Dockerfile 검증
+# - CD: 배포 번들을 서버에 풀고 docker compose up (서버 .env 는 tarball 에서 제외 → 기존 유지)
+#   기본은 전체 스택 up. app 만: ssh 안 마지막을 docker compose up -d --build --force-recreate app
+# Secrets: SSH_KEY, SERVER_HOST, SERVER_PORT, SERVER_USER
+# 선택: SERVER_DEPLOY_PATH (비우면 원격에서 ~/meditation-map-be 사용)
+
 name: Spring Boot CI-CD
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 저장소 코드 가져오기
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Java 17 설치
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
 
-      # gradlew 실행 권한 부여
-      - name: Grant execute permission
+      - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # Spring Boot 빌드
       - name: Build with Gradle
         run: ./gradlew clean build -x test
 
-      # SSH 설정
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker image (app service)
+        run: docker compose build app
+
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude='./.git' \
+            --exclude='./.gradle' \
+            --exclude='./build' \
+            --exclude='./bin' \
+            --exclude='./.env' \
+            --exclude='./.env.*' \
+            -czf deploy.tgz .
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-
           chmod 600 ~/.ssh/id_rsa
-
           ssh-keyscan -p ${{ secrets.SERVER_PORT }} \
             -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      # Mac 서버에 JAR 업로드
-      - name: Upload JAR to Mac Server
+      - name: Upload bundle and deploy with Docker Compose
         run: |
+          set -euo pipefail
           scp -P ${{ secrets.SERVER_PORT }} \
-            build/libs/*.jar \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/Users/${{ secrets.SERVER_USER }}/app/app.jar
+            deploy.tgz \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/meditation-map-be-deploy.tgz
 
-      # 애플리케이션 재배포
-      - name: Deploy Application
-        run: |
           ssh -p ${{ secrets.SERVER_PORT }} \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-
-              pkill -f 'app.jar' || true
-
-              nohup java -jar /Users/${{ secrets.SERVER_USER }}/app/app.jar \
-                > /Users/${{ secrets.SERVER_USER }}/app/app.log 2>&1 &
-
-          EOF
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "set -euo pipefail; \
+            DEPLOY_PATH='${{ secrets.SERVER_DEPLOY_PATH }}'; \
+            if [ -z \"\$DEPLOY_PATH\" ]; then DEPLOY_PATH=\"\$HOME/meditation-map-be\"; fi; \
+            mkdir -p \"\$DEPLOY_PATH\"; \
+            tar -xzf /tmp/meditation-map-be-deploy.tgz -C \"\$DEPLOY_PATH\"; \
+            rm -f /tmp/meditation-map-be-deploy.tgz; \
+            chmod +x \"\$DEPLOY_PATH/gradlew\" 2>/dev/null || true; \
+            cd \"\$DEPLOY_PATH\"; \
+            docker compose up -d --build"
