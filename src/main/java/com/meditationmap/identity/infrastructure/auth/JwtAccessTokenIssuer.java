@@ -17,7 +17,10 @@ public class JwtAccessTokenIssuer implements AccessTokenIssuer {
     public IssuedToken issueFor(Member member) {
         String token =
                 jwtService.createAccessToken(
-                        member.getEmail().value(), Map.of("uid", member.getId().value()));
-        return new IssuedToken(token, "Bearer");
+                        member.authenticationName(),
+                        Map.of(
+                                "uid", member.getId().value(),
+                                "role", member.getRole().name()));
+        return new IssuedToken(token, "Bearer", member.getRole().name());
     }
 }

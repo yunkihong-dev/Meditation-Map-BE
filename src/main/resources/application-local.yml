@@ -16,4 +16,5 @@ spring:
 app:
   storage:
     minio:
-      enabled: true
+      # 로컬 프로필: 기본 켜 둠. 끄려면 .env 에 MINIO_ENABLED=false
+      enabled: ${MINIO_ENABLED:true}

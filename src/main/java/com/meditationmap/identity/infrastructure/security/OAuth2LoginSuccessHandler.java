@@ -1,6 +1,7 @@
 package com.meditationmap.identity.infrastructure.security;
 
 import com.meditationmap.identity.application.OAuth2IdentityService;
+import com.meditationmap.shared.exception.DomainArgumentException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -22,6 +23,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final OAuth2IdentityService oAuth2IdentityService;
     private final JwtService jwtService;
+    private final AuthCookieWriter authCookieWriter;
 
     @Value("${app.oauth2.frontend-callback-url}")
     private String frontendCallbackUrl;
@@ -54,39 +56,56 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                     oAuth2IdentityService.loginExistingMemberOnly(
                             emailNormalized, registrationId, subject);
 
+            String pictureUrl =
+                    normalizePictureQueryValue(
+                            resolveProfilePictureUrl(oauthToken.getPrincipal(), registrationId));
+
             if (existingLogin.isPresent()) {
                 var issued = existingLogin.get();
-                String url =
-                        frontendCallbackUrl
-                                + "?accessToken="
-                                + URLEncoder.encode(issued.accessToken(), StandardCharsets.UTF_8)
-                                + "&tokenType="
-                                + URLEncoder.encode(issued.tokenType(), StandardCharsets.UTF_8)
-                                + "&email="
-                                + URLEncoder.encode(emailNormalized, StandardCharsets.UTF_8);
-                getRedirectStrategy().sendRedirect(request, response, url);
+                authCookieWriter.writeAccessTokenCookie(response, issued.accessToken());
+                clearOAuthSession(request, response);
+                StringBuilder sb = new StringBuilder(frontendCallbackUrl);
+                sb.append("?login=success");
+                if (!pictureUrl.isEmpty()) {
+                    sb.append("&picture=").append(URLEncoder.encode(pictureUrl, StandardCharsets.UTF_8));
+                }
+                getRedirectStrategy().sendRedirect(request, response, sb.toString());
                 return;
             }
 
             String ticket =
                     jwtService.createOAuthSignupTicket(
-                            emailNormalized, registrationId, subject);
+                            emailNormalized, registrationId, subject, pictureUrl);
 
-            String url =
-                    frontendCallbackUrl
-                            + "?oauthSignupTicket="
-                            + URLEncoder.encode(ticket, StandardCharsets.UTF_8)
-                            + "&email="
-                            + URLEncoder.encode(emailNormalized, StandardCharsets.UTF_8);
+            StringBuilder sb = new StringBuilder(frontendCallbackUrl);
+            sb.append("?oauthSignupTicket=")
+                    .append(URLEncoder.encode(ticket, StandardCharsets.UTF_8))
+                    .append("&email=")
+                    .append(URLEncoder.encode(emailNormalized, StandardCharsets.UTF_8));
+            if (!pictureUrl.isEmpty()) {
+                sb.append("&picture=").append(URLEncoder.encode(pictureUrl, StandardCharsets.UTF_8));
+            }
+            String url = sb.toString();
 
+            clearOAuthSession(request, response);
             getRedirectStrategy().sendRedirect(request, response, url);
-        } catch (IllegalArgumentException ex) {
+        } catch (DomainArgumentException ex) {
             response.sendRedirect(withQuery("error", "invalid_email"));
         }
     }
 
     private String withQuery(String key, String value) {
         return frontendCallbackUrl + "?" + key + "=" + URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private static void clearOAuthSession(
+            HttpServletRequest request, HttpServletResponse response) {
+        var session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        response.addHeader(
+                "Set-Cookie", "JSESSIONID=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
     }
 
     private static String resolveOauthSubject(Object principal, String registrationId) {
@@ -98,12 +117,63 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 Object id = user.getAttribute("id");
                 return id != null ? String.valueOf(id) : "";
             }
+            if ("naver".equals(registrationId)) {
+                Object id = user.getAttribute("id");
+                return id != null ? String.valueOf(id) : "";
+            }
             Object sub = user.getAttribute("sub");
             if (sub != null) {
                 return String.valueOf(sub);
             }
             Object id = user.getAttribute("id");
             return id != null ? String.valueOf(id) : "";
+        }
+        return "";
+    }
+
+    private static String normalizePictureQueryValue(String url) {
+        if (url == null) return "";
+        String t = url.trim();
+        if (t.startsWith("http://")) {
+            t = "https://" + t.substring("http://".length());
+        }
+        return t.startsWith("https://") ? t : "";
+    }
+
+    private static String resolveProfilePictureUrl(Object principal, String registrationId) {
+        if (principal instanceof OidcUser oidc) {
+            String p = oidc.getPicture();
+            return p != null && !p.isBlank() ? p : "";
+        }
+        if (principal instanceof OAuth2User user) {
+            if ("google".equals(registrationId)) {
+                Object pic = user.getAttribute("picture");
+                return pic != null ? String.valueOf(pic) : "";
+            }
+            if ("naver".equals(registrationId)) {
+                Object pic = user.getAttribute("profile_image");
+                return pic != null && !String.valueOf(pic).isBlank()
+                        ? String.valueOf(pic).trim()
+                        : "";
+            }
+            if ("kakao".equals(registrationId)) {
+                Object accountObj = user.getAttribute("kakao_account");
+                if (!(accountObj instanceof Map<?, ?> account)) {
+                    return "";
+                }
+                Object profileObj = account.get("profile");
+                if (!(profileObj instanceof Map<?, ?> profile)) {
+                    return "";
+                }
+                Object full = profile.get("profile_image_url");
+                Object thumb = profile.get("thumbnail_image_url");
+                if (full != null && !String.valueOf(full).isBlank()) {
+                    return String.valueOf(full).trim();
+                }
+                if (thumb != null && !String.valueOf(thumb).isBlank()) {
+                    return String.valueOf(thumb).trim();
+                }
+            }
         }
         return "";
     }
@@ -120,6 +190,10 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                     return em != null ? String.valueOf(em) : null;
                 }
                 return null;
+            }
+            if ("naver".equals(registrationId)) {
+                Object email = user.getAttribute("email");
+                return email != null ? String.valueOf(email) : null;
             }
             Object email = user.getAttribute("email");
             return email != null ? String.valueOf(email) : null;

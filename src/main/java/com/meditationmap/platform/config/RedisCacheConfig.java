@@ -26,6 +26,8 @@ public class RedisCacheConfig {
                 RedisCacheConfiguration.defaultCacheConfig()
                         .entryTtl(Duration.ofSeconds(defaultTtlSeconds))
                         .disableCachingNullValues()
+                        // v1·이전 포맷 키 무시: 새 배포 후에도 깨진 값이 남을 수 있음 → RedisCorruptCacheEntryErrorHandler 가 per-key 복구
+                        .prefixCacheNameWith("mm:cache:v2:")
                         .serializeKeysWith(
                                 RedisSerializationContext.SerializationPair.fromSerializer(
                                         RedisSerializer.string()))

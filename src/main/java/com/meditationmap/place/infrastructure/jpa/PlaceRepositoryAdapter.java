@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meditationmap.place.domain.Place;
 import com.meditationmap.place.domain.PlaceId;
 import com.meditationmap.place.domain.PlaceRepository;
+import com.meditationmap.shared.exception.ErrorCode;
+import com.meditationmap.shared.exception.InfrastructureException;
 import com.meditationmap.region.domain.RegionId;
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +43,7 @@ public class PlaceRepositoryAdapter implements PlaceRepository {
             String json = objectMapper.writeValueAsString(e.getData());
             return new Place(PlaceId.of(e.getId()), RegionId.of(e.getRegionId()), json);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("place serialize failed id=" + e.getId(), ex);
+            throw new InfrastructureException(ErrorCode.PLACE_SERIALIZATION_FAILED, ex);
         }
     }
 }

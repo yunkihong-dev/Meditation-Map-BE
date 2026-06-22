@@ -1,5 +1,7 @@
 package com.meditationmap.identity.domain;
 
+import com.meditationmap.shared.exception.DomainArgumentException;
+import com.meditationmap.shared.exception.ErrorCode;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -8,7 +10,7 @@ public record MemberId(String value) {
     public MemberId {
         Objects.requireNonNull(value);
         if (value.isBlank()) {
-            throw new IllegalArgumentException("member id required");
+            throw new DomainArgumentException(ErrorCode.INVALID_MEMBER_ID);
         }
     }
 

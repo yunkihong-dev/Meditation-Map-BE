@@ -8,7 +8,11 @@ public interface MemberRepository {
 
     Optional<Member> findByEmail(Email email);
 
+    Optional<Member> findByLoginId(String loginId);
+
     Optional<Member> findByOauth(String provider, String subject);
 
     boolean existsByEmail(Email email);
+
+    boolean existsByPhoneE164(String phoneE164Digits);
 }

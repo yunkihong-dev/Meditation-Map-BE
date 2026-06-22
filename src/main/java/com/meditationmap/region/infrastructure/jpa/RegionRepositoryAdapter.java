@@ -14,8 +14,8 @@ public class RegionRepositoryAdapter implements RegionRepository {
     private final RegionSpringDataRepository springData;
 
     @Override
-    public List<Region> findAllOrderBySortOrder() {
-        return springData.findAllByOrderBySortOrderAsc().stream()
+    public List<Region> findAllOrderByName() {
+        return springData.findAllByOrderByNameAsc().stream()
                 .map(
                         e ->
                                 new Region(

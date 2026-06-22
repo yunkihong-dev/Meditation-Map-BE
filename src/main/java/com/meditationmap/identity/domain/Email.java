@@ -1,5 +1,7 @@
 package com.meditationmap.identity.domain;
 
+import com.meditationmap.shared.exception.DomainArgumentException;
+import com.meditationmap.shared.exception.ErrorCode;
 import java.util.Objects;
 
 public record Email(String value) {
@@ -8,7 +10,7 @@ public record Email(String value) {
         Objects.requireNonNull(value);
         String t = value.trim().toLowerCase();
         if (t.isEmpty() || !t.contains("@")) {
-            throw new IllegalArgumentException("invalid email");
+            throw new DomainArgumentException(ErrorCode.INVALID_EMAIL);
         }
         value = t;
     }

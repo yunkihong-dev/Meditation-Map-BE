@@ -1,6 +1,7 @@
 package com.meditationmap.identity.application;
 
 import com.meditationmap.identity.domain.Email;
+import com.meditationmap.identity.domain.MemberNotFoundException;
 import com.meditationmap.identity.domain.MemberRepository;
 import com.meditationmap.identity.infrastructure.jpa.MemberFavoritePlaceJpaEntity;
 import com.meditationmap.identity.infrastructure.jpa.MemberFavoritePlaceSpringDataRepository;
@@ -24,7 +25,7 @@ public class FavoritePlacesApplicationService {
         var member =
                 memberRepository
                         .findByEmail(Email.of(email))
-                        .orElseThrow(() -> new IllegalStateException("member not found"));
+                        .orElseThrow(MemberNotFoundException::new);
         return favoritePlaceSpringDataRepository.findAllById_MemberIdOrderByCreatedAtAsc(member.getId().value()).stream()
                 .map(e -> e.getId().getPlaceId())
                 .toList();
@@ -34,7 +35,7 @@ public class FavoritePlacesApplicationService {
         var member =
                 memberRepository
                         .findByEmail(Email.of(email))
-                        .orElseThrow(() -> new IllegalStateException("member not found"));
+                        .orElseThrow(MemberNotFoundException::new);
         String memberId = member.getId().value();
         favoritePlaceSpringDataRepository.deleteAllForMember(memberId);
         if (placeIds == null || placeIds.isEmpty()) {

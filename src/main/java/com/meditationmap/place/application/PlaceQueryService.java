@@ -3,7 +3,10 @@ package com.meditationmap.place.application;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meditationmap.place.application.PlaceProgramNormalizer;
 import com.meditationmap.place.domain.PlaceId;
+import com.meditationmap.shared.exception.ErrorCode;
+import com.meditationmap.shared.exception.InfrastructureException;
 import com.meditationmap.place.domain.PlaceRepository;
 import com.meditationmap.place.infrastructure.jdbc.PlaceSummaryJdbcRepository;
 import com.meditationmap.region.domain.RegionId;
@@ -41,9 +44,13 @@ public class PlaceQueryService {
 
     private JsonNode toJson(com.meditationmap.place.domain.Place p) {
         try {
-            return objectMapper.readTree(p.getJsonPayload());
+            JsonNode node = objectMapper.readTree(p.getJsonPayload());
+            if (node instanceof com.fasterxml.jackson.databind.node.ObjectNode objectNode) {
+                return PlaceProgramNormalizer.normalizePlaceData(objectNode);
+            }
+            return node;
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("place json corrupt id=" + p.getId(), e);
+            throw new InfrastructureException(ErrorCode.PLACE_PAYLOAD_INVALID, e);
         }
     }
 }

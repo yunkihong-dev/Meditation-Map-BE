@@ -1,10 +1,11 @@
 package com.meditationmap.identity.domain;
 
 import com.meditationmap.shared.domain.DomainException;
+import com.meditationmap.shared.exception.ErrorCode;
 
 public class DuplicateEmailException extends DomainException {
 
     public DuplicateEmailException() {
-        super("이미 사용 중인 이메일입니다.");
+        super(ErrorCode.EMAIL_ALREADY_EXISTS);
     }
 }

@@ -17,6 +17,6 @@ public class RegionQueryService {
 
     @Cacheable(value = "regions")
     public List<Region> listRegions() {
-        return regionRepository.findAllOrderBySortOrder();
+        return regionRepository.findAllOrderByName();
     }
 }

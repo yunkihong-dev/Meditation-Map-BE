@@ -7,6 +7,8 @@ import com.meditationmap.expert.domain.Expert;
 import com.meditationmap.expert.domain.ExpertId;
 import com.meditationmap.expert.domain.ExpertRepository;
 import com.meditationmap.region.domain.RegionId;
+import com.meditationmap.shared.exception.ErrorCode;
+import com.meditationmap.shared.exception.InfrastructureException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +40,7 @@ public class ExpertRepositoryAdapter implements ExpertRepository {
             String json = objectMapper.writeValueAsString(root);
             return new Expert(ExpertId.of(e.getId()), json, regionIds);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("expert serialize failed id=" + e.getId(), ex);
+            throw new InfrastructureException(ErrorCode.EXPERT_SERIALIZATION_FAILED, ex);
         }
     }
 

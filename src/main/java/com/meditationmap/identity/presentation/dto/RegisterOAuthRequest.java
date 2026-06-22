@@ -8,4 +8,9 @@ import jakarta.validation.constraints.Size;
 public record RegisterOAuthRequest(
         @NotBlank @Email @Schema(example = "user@example.com") String email,
         @NotBlank @Size(min = 8, max = 200) @Schema(example = "password12") String password,
-        @NotBlank @Schema(description = "OAuth 성공 후 발급된 oauth_signup_pending JWT") String oauthSignupToken) {}
+        @NotBlank @Schema(description = "OAuth 성공 후 발급된 oauth_signup_pending JWT") String oauthSignupToken,
+        @Size(max = 512)
+                @Schema(
+                        description =
+                                "선택. 스토리지 objectKey 또는 multipart OAuth 가입의 profileImage 파일.")
+                String profileImageObjectKey) {}

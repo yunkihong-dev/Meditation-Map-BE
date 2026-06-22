@@ -1,5 +1,7 @@
 package com.meditationmap.region.domain;
 
+import com.meditationmap.shared.exception.DomainArgumentException;
+import com.meditationmap.shared.exception.ErrorCode;
 import java.util.Objects;
 
 public record RegionId(String value) {
@@ -7,7 +9,7 @@ public record RegionId(String value) {
     public RegionId {
         Objects.requireNonNull(value);
         if (value.isBlank()) {
-            throw new IllegalArgumentException("region id required");
+            throw new DomainArgumentException(ErrorCode.INVALID_REGION_ID);
         }
     }
 

@@ -57,13 +57,17 @@ public class JwtService {
     }
 
     /** OAuth 가입 미완료 시 프론트로 넘길 짧은 TTL 토큰 (회원 생성 전 단계). */
-    public String createOAuthSignupTicket(String email, String registrationId, String oauthSubject) {
+    public String createOAuthSignupTicket(
+            String email, String registrationId, String oauthSubject, String profilePictureUrl) {
         Date now = new Date();
         long ttlMs = Duration.ofMinutes(30).toMillis();
         Map<String, Object> claims = new HashMap<>();
         claims.put("typ", "oauth_signup_pending");
         claims.put("registrationId", registrationId);
         claims.put("oauthSubject", oauthSubject);
+        if (profilePictureUrl != null && !profilePictureUrl.isBlank()) {
+            claims.put("profilePicture", profilePictureUrl.trim());
+        }
         return Jwts.builder()
                 .claims(claims)
                 .subject(email.toLowerCase())
@@ -89,11 +93,23 @@ public class JwtService {
         if (rid == null || sub == null || subjectEmail == null || subjectEmail.isBlank()) {
             throw new InvalidOAuthSignupTokenException();
         }
+        Object pic = c.get("profilePicture");
+        String profilePictureUrl = null;
+        if (pic != null) {
+            String s = String.valueOf(pic).trim();
+            if (!s.isBlank()) {
+                profilePictureUrl = s;
+            }
+        }
         return new OAuthSignupTicketClaims(
-                subjectEmail.toLowerCase(), Objects.toString(rid), Objects.toString(sub));
+                subjectEmail.toLowerCase(),
+                Objects.toString(rid),
+                Objects.toString(sub),
+                profilePictureUrl);
     }
 
-    public record OAuthSignupTicketClaims(String email, String registrationId, String oauthSubject) {}
+    public record OAuthSignupTicketClaims(
+            String email, String registrationId, String oauthSubject, String profilePictureUrl) {}
 
     private Claims parseClaims(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();

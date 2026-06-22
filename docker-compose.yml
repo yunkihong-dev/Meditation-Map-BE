@@ -3,6 +3,9 @@ services:
     build: .
     ports:
       - "8080:8080"
+    # 같은 폴더의 .env 를 컨테이너 프로세스 env 로 넘김(application.yml 의 ${NAVER_SMS_ID} 등)
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
       # 같은 디렉터리의 .env 에 GOOGLE_/KAKAO_ 를 넣으면 아래 치환에 사용됩니다.
@@ -10,7 +13,34 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-docker-dev-placeholder}
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-docker-dev-placeholder}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-docker-dev-placeholder}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-docker-dev-placeholder}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-docker-dev-placeholder}
+      MINIO_ENABLED: ${MINIO_ENABLED:-true}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio12345}
+      MINIO_BUCKET: ${MINIO_BUCKET:-meditation-media}
       MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-http://localhost:9000}
+      JWT_SECRET: ${JWT_SECRET:-}
+      APP_ADMIN_LOGIN_ID: ${APP_ADMIN_LOGIN_ID:-admin}
+      APP_ADMIN_BOOTSTRAP_PASSWORD: ${APP_ADMIN_BOOTSTRAP_PASSWORD:-admin}
+      APP_ADMIN_BOOTSTRAP_EMAIL: ${APP_ADMIN_BOOTSTRAP_EMAIL:-admin@internal.local}
+      PHONE_SMS_PROVIDER: ${PHONE_SMS_PROVIDER:-channeltalk}
+      PHONE_OTP_HMAC_SECRET: ${PHONE_OTP_HMAC_SECRET:-}
+      PHONE_SNS_REGION: ${PHONE_SNS_REGION:-ap-northeast-2}
+      PHONE_HTTP_SMS_URL: ${PHONE_HTTP_SMS_URL:-}
+      PHONE_HTTP_SMS_BEARER_TOKEN: ${PHONE_HTTP_SMS_BEARER_TOKEN:-}
+      CHANNEL_TALK_ACCESS_KEY: ${CHANNEL_TALK_ACCESS_KEY:-}
+      CHANNEL_TALK_ACCESS_SECRET: ${CHANNEL_TALK_ACCESS_SECRET:-}
+      CHANNEL_TALK_BOT_NAME: ${CHANNEL_TALK_BOT_NAME:-}
+      CHANNEL_TALK_BASE_URL: ${CHANNEL_TALK_BASE_URL:-https://api.channel.io}
+      NAVER_SMS_ID: ${NAVER_SMS_ID:-}
+      NAVER_SMS_PHONE_NUMBER: ${NAVER_SMS_PHONE_NUMBER:-}
+      NAVER_ACCESS_KEY: ${NAVER_ACCESS_KEY:-}
+      NAVER_SECRET_KEY: ${NAVER_SECRET_KEY:-}
+      NAVER_SMS_BASE_URL: ${NAVER_SMS_BASE_URL:-https://sens.apigw.ntruss.com}
+      # 앱에서 app.cors.allowed-origins 로 바인딩 (프론트 Origin 과 콤마로 맞춤)
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
     depends_on:
       mysql:
         condition: service_healthy

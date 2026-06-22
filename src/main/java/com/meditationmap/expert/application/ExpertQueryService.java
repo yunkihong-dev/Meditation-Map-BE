@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meditationmap.expert.domain.ExpertId;
+import com.meditationmap.shared.exception.ErrorCode;
+import com.meditationmap.shared.exception.InfrastructureException;
 import com.meditationmap.expert.domain.ExpertRepository;
 import com.meditationmap.expert.infrastructure.jdbc.ExpertSummaryJdbcRepository;
 import com.meditationmap.region.domain.RegionId;
@@ -38,7 +40,7 @@ public class ExpertQueryService {
         try {
             return objectMapper.readTree(e.getJsonPayload());
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("expert json corrupt id=" + e.getId(), ex);
+            throw new InfrastructureException(ErrorCode.EXPERT_PAYLOAD_INVALID, ex);
         }
     }
 }

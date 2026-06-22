@@ -3,7 +3,7 @@ spring:
     name: meditation-map-be
 
   datasource:
-    url: jdbc:mysql://localhost:3306/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true}
     username: meditation
     password: meditation
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -41,12 +41,26 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             scope:
               - profile_nickname
+              - profile_image
               - account_email
+          naver:
+            provider: naver
+            client-id: ${NAVER_CLIENT_ID:}
+            client-secret: ${NAVER_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # 네이버 명세상 authorize 에 scope 는 불필요(전송 시 일부 클라에서 오류/404 가능)
         provider:
           kakao:
             authorization-uri: https://kauth.kakao.com/oauth/authorize
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+          naver:
+            authorization-uri: https://nid.naver.com/oauth2.0/authorize
+            token-uri: https://nid.naver.com/oauth2.0/token
+            user-info-uri: https://openapi.naver.com/v1/nid/me
             user-name-attribute: id
 
   servlet:
@@ -79,24 +93,64 @@ springdoc:
 app:
   jwt:
     secret: ${JWT_SECRET:change-this-to-a-very-long-secret-key-for-hs256-min-256-bits-please-change-in-prod}
-    expiration-ms: 86400000
+    expiration-ms: ${JWT_EXPIRATION_MS:604800000}
+    cookie-secure: ${JWT_COOKIE_SECURE:false}
+
+  admin:
+    bootstrap-login-id: ${APP_ADMIN_LOGIN_ID:admin}
+    bootstrap-password: ${APP_ADMIN_BOOTSTRAP_PASSWORD:admin}
+    bootstrap-email: ${APP_ADMIN_BOOTSTRAP_EMAIL:admin@internal.local}
 
   storage:
     minio:
-      enabled: false
-      endpoint: http://127.0.0.1:9000
-      access-key: minio
-      secret-key: minio12345
-      bucket: meditation-media
-      public-base-url: http://localhost:9000
+      # .env: MINIO_ENABLED, MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_PUBLIC_BASE_URL
+      enabled: ${MINIO_ENABLED:false}
+      endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
+      access-key: ${MINIO_ACCESS_KEY:minio}
+      secret-key: ${MINIO_SECRET_KEY:minio12345}
+      bucket: ${MINIO_BUCKET:meditation-media}
+      public-base-url: ${MINIO_PUBLIC_BASE_URL:http://localhost:9000}
 
   cors:
-    # 주소 표시줄이 http://127.0.0.1:3000 인 경우 Origin 이 달라지므로 둘 다 넣어둠
-    allowed-origins: http://localhost:3000,http://127.0.0.1:3000
+    # APP_CORS_ALLOWED_ORIGINS (.env). env 없으면 아래 로컬 3000 기본.
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
 
   oauth2:
-    # OAuth 성공 후 리다이렉트: 프론트가 accessToken·email 쿼리를 처리하는 경로와 맞춥니다.
+    # env 없어도 기동 가능하도록 : 기본값 유지 (.env 에 있으면 그걸 우선)
     frontend-callback-url: ${OAUTH2_FRONTEND_CALLBACK_URL:http://localhost:3000/auth/oauth}
+    frontend-auth-entry-url: ${OAUTH2_FRONTEND_AUTH_ENTRY_URL:http://localhost:3000/profile}
+
+  auth:
+    phone:
+      # log | channeltalk(채널톡 UserChat) | naver(SENS) | sns | http
+      sms-provider: ${PHONE_SMS_PROVIDER:log}
+      otp-ttl-seconds: 300
+      verify-token-ttl-seconds: 900
+      resend-cooldown-seconds: 60
+      # 비우면 빈 문자열로 들어오는 경우가 있어(Java PostConstruct) JWT_SECRET 으로 대체합니다.
+      otp-hmac-secret: ${PHONE_OTP_HMAC_SECRET:}
+      sns:
+        region: ${PHONE_SNS_REGION:ap-northeast-2}
+      http:
+        url: ${PHONE_HTTP_SMS_URL:}
+        bearer-token: ${PHONE_HTTP_SMS_BEARER_TOKEN:}
+        connect-timeout-ms: 5000
+        read-timeout-ms: 15000
+      naver:
+        service-id: ${NAVER_SMS_ID:}
+        from: ${NAVER_SMS_PHONE_NUMBER:}
+        access-key: ${NAVER_ACCESS_KEY:}
+        secret-key: ${NAVER_SECRET_KEY:}
+        base-url: ${NAVER_SMS_BASE_URL:https://sens.apigw.ntruss.com}
+        connect-timeout-ms: 5000
+        read-timeout-ms: 15000
+      channeltalk:
+        access-key: ${CHANNEL_TALK_ACCESS_KEY:}
+        access-secret: ${CHANNEL_TALK_ACCESS_SECRET:}
+        bot-name: ${CHANNEL_TALK_BOT_NAME:}
+        base-url: ${CHANNEL_TALK_BASE_URL:https://api.channel.io}
+        connect-timeout-ms: 5000
+        read-timeout-ms: 15000
 
   cache:
     default-ttl-seconds: 600

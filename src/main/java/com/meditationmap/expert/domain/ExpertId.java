@@ -1,5 +1,7 @@
 package com.meditationmap.expert.domain;
 
+import com.meditationmap.shared.exception.DomainArgumentException;
+import com.meditationmap.shared.exception.ErrorCode;
 import java.util.Objects;
 
 public record ExpertId(String value) {
@@ -7,7 +9,7 @@ public record ExpertId(String value) {
     public ExpertId {
         Objects.requireNonNull(value);
         if (value.isBlank()) {
-            throw new IllegalArgumentException("expert id required");
+            throw new DomainArgumentException(ErrorCode.INVALID_EXPERT_ID);
         }
     }
 
