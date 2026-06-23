@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>meditation-map · 배포 확인</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .card {
+        text-align: center;
+        padding: 48px 40px;
+        background: #1e293b;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        max-width: 420px;
+      }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      p { margin: 6px 0; color: #94a3b8; }
+      .ok { color: #34d399; font-weight: 700; }
+      .row { margin-top: 20px; font-size: 14px; }
+      .row span { display: inline-block; min-width: 90px; color: #cbd5e1; }
+      .pending { color: #fbbf24; }
+      .fail { color: #f87171; }
+      code { background: #0f172a; padding: 2px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>✅ <span class="ok">배포 정상</span></h1>
+      <p>nginx 리버스 프록시가 동작 중입니다.</p>
+      <div class="row"><span>API(<code>/me</code>)</span> <b id="api" class="pending">확인 중…</b></div>
+      <div class="row"><span>이미지(<code>/image/</code>)</span> <b id="img" class="pending">확인 중…</b></div>
+      <p style="margin-top:24px;font-size:12px">이 페이지는 <code>/test</code> 에서 nginx 가 직접 서빙합니다.</p>
+    </div>
+
+    <script>
+      // 같은 도메인의 백엔드/이미지 경로에 핑을 보내 "응답이 오는지"만 본다.
+      // 401/403/404 라도 응답이 오면 라우팅은 정상이라는 뜻(서버에 도달).
+      async function ping(path) {
+        try {
+          const res = await fetch(path, { method: "GET", redirect: "manual" });
+          return res.status === 0 ? "도달(차단된 리다이렉트)" : "응답 " + res.status;
+        } catch (e) {
+          return null;
+        }
+      }
+      (async () => {
+        const api = document.getElementById("api");
+        const img = document.getElementById("img");
+        const a = await ping("/me");
+        api.textContent = a ?? "실패";
+        api.className = a ? "ok" : "fail";
+        const i = await ping("/image/");
+        img.textContent = i ?? "실패";
+        img.className = i ? "ok" : "fail";
+      })();
+    </script>
+  </body>
+</html>

@@ -6,6 +6,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/test.html:/usr/share/nginx/html/test.html:ro
     depends_on:
       - app
       - minio
