@@ -69,7 +69,9 @@ spring:
       max-request-size: 30MB
 
 server:
-  port: 8080
+  port: 80
+  # nginx 리버스 프록시 뒤에서 X-Forwarded-* 를 신뢰 (OAuth redirect_uri·scheme/host 정확화)
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -122,33 +124,19 @@ app:
 
   auth:
     phone:
-      # log | channeltalk(채널톡 UserChat) | naver(SENS) | sns | http
+      # log(개발용 콘솔 출력) | naver(SENS 실제 SMS)
       sms-provider: ${PHONE_SMS_PROVIDER:log}
       otp-ttl-seconds: 300
       verify-token-ttl-seconds: 900
       resend-cooldown-seconds: 60
       # 비우면 빈 문자열로 들어오는 경우가 있어(Java PostConstruct) JWT_SECRET 으로 대체합니다.
       otp-hmac-secret: ${PHONE_OTP_HMAC_SECRET:}
-      sns:
-        region: ${PHONE_SNS_REGION:ap-northeast-2}
-      http:
-        url: ${PHONE_HTTP_SMS_URL:}
-        bearer-token: ${PHONE_HTTP_SMS_BEARER_TOKEN:}
-        connect-timeout-ms: 5000
-        read-timeout-ms: 15000
       naver:
         service-id: ${NAVER_SMS_ID:}
         from: ${NAVER_SMS_PHONE_NUMBER:}
         access-key: ${NAVER_ACCESS_KEY:}
         secret-key: ${NAVER_SECRET_KEY:}
         base-url: ${NAVER_SMS_BASE_URL:https://sens.apigw.ntruss.com}
-        connect-timeout-ms: 5000
-        read-timeout-ms: 15000
-      channeltalk:
-        access-key: ${CHANNEL_TALK_ACCESS_KEY:}
-        access-secret: ${CHANNEL_TALK_ACCESS_SECRET:}
-        bot-name: ${CHANNEL_TALK_BOT_NAME:}
-        base-url: ${CHANNEL_TALK_BASE_URL:https://api.channel.io}
         connect-timeout-ms: 5000
         read-timeout-ms: 15000
 

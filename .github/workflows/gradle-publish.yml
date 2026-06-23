@@ -1,10 +1,13 @@
 # Spring Boot + Docker Compose 배포
-# - CI: Gradle 빌드 + docker compose build app 로 Dockerfile 검증
+# - CI: docker compose build app 로 Dockerfile 검증 (실제 빌드는 멀티스테이지 Dockerfile 내부 Gradle 이 수행)
 # - CD: GitHub Secrets 로 .env 작성 → 서버에 같이 업로드 후 docker compose up
+# - 진입점은 nginx(:80) 리버스 프록시: /image/ → MinIO(내부 9000), 그 외 → app. nginx/default.conf 가 deploy.tgz 에 포함됨.
+#   ⚠️ MINIO_PUBLIC_BASE_URL 은 이제 nginx 경로 기준 → 운영값 예: https://도메인/image (포트 9000 노출 불필요)
 # Secrets: SSH_KEY, SERVER_HOST, SERVER_PORT, SERVER_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-#          KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, MINIO_PUBLIC_BASE_URL, JWT_SECRET (권장), APP_CORS_ALLOWED_ORIGINS (선택),
-#          PHONE_SMS_PROVIDER, PHONE_OTP_HMAC_SECRET, PHONE_SNS_REGION, PHONE_HTTP_SMS_URL,
-#          PHONE_HTTP_SMS_BEARER_TOKEN (선택 · 회원가입 문자)
+#          KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET,
+#          OAUTH2_FRONTEND_CALLBACK_URL, MINIO_PUBLIC_BASE_URL, JWT_SECRET (권장), APP_CORS_ALLOWED_ORIGINS (선택),
+#          PHONE_SMS_PROVIDER, PHONE_OTP_HMAC_SECRET (선택 · 비우면 JWT_SECRET 대체),
+#          NAVER_SMS_ID, NAVER_SMS_PHONE_NUMBER, NAVER_ACCESS_KEY, NAVER_SECRET_KEY (네이버 SMS)
 # 선택: SERVER_DEPLOY_PATH (비우면 원격에서 ~/meditation-map-be 사용)
 #
 # 기본은 전체 스택 up. app 만: ssh 안 마지막을 docker compose up -d --build --force-recreate app
@@ -29,20 +32,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: "temurin"
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Build with Gradle
-        run: ./gradlew clean build -x test
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # docker-compose.yml 의 env_file: .env 는 파일이 없으면 build 단계에서도
+      # "env file .env not found" 로 실패합니다. .env 는 .gitignore 대상이라
+      # 러너 체크아웃에는 없으므로 CI 검증용 빈 .env 를 만들어 둡니다.
+      # (compose 변수는 모두 ${VAR:-default} 기본값이 있어 빈 파일로 충분, 실제 값은 서버에서 주입)
+      - name: Prepare placeholder .env for build validation
+        run: touch .env
 
       - name: Validate Docker image (app service)
         run: docker compose build app
@@ -72,14 +70,18 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          OAUTH2_FRONTEND_CALLBACK_URL: ${{ secrets.OAUTH2_FRONTEND_CALLBACK_URL }}
           MINIO_PUBLIC_BASE_URL: ${{ secrets.MINIO_PUBLIC_BASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           APP_CORS_ALLOWED_ORIGINS: ${{ secrets.APP_CORS_ALLOWED_ORIGINS }}
           PHONE_SMS_PROVIDER: ${{ secrets.PHONE_SMS_PROVIDER }}
           PHONE_OTP_HMAC_SECRET: ${{ secrets.PHONE_OTP_HMAC_SECRET }}
-          PHONE_SNS_REGION: ${{ secrets.PHONE_SNS_REGION }}
-          PHONE_HTTP_SMS_URL: ${{ secrets.PHONE_HTTP_SMS_URL }}
-          PHONE_HTTP_SMS_BEARER_TOKEN: ${{ secrets.PHONE_HTTP_SMS_BEARER_TOKEN }}
+          NAVER_SMS_ID: ${{ secrets.NAVER_SMS_ID }}
+          NAVER_SMS_PHONE_NUMBER: ${{ secrets.NAVER_SMS_PHONE_NUMBER }}
+          NAVER_ACCESS_KEY: ${{ secrets.NAVER_ACCESS_KEY }}
+          NAVER_SECRET_KEY: ${{ secrets.NAVER_SECRET_KEY }}
         run: |
           umask 077
           printf '%s\n' \
@@ -87,14 +89,18 @@ jobs:
             "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" \
             "KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}" \
             "KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}" \
+            "NAVER_CLIENT_ID=${NAVER_CLIENT_ID}" \
+            "NAVER_CLIENT_SECRET=${NAVER_CLIENT_SECRET}" \
+            "OAUTH2_FRONTEND_CALLBACK_URL=${OAUTH2_FRONTEND_CALLBACK_URL}" \
             "MINIO_PUBLIC_BASE_URL=${MINIO_PUBLIC_BASE_URL}" \
             "JWT_SECRET=${JWT_SECRET}" \
             "APP_CORS_ALLOWED_ORIGINS=${APP_CORS_ALLOWED_ORIGINS}" \
             "PHONE_SMS_PROVIDER=${PHONE_SMS_PROVIDER}" \
             "PHONE_OTP_HMAC_SECRET=${PHONE_OTP_HMAC_SECRET}" \
-            "PHONE_SNS_REGION=${PHONE_SNS_REGION}" \
-            "PHONE_HTTP_SMS_URL=${PHONE_HTTP_SMS_URL}" \
-            "PHONE_HTTP_SMS_BEARER_TOKEN=${PHONE_HTTP_SMS_BEARER_TOKEN}" > server.env
+            "NAVER_SMS_ID=${NAVER_SMS_ID}" \
+            "NAVER_SMS_PHONE_NUMBER=${NAVER_SMS_PHONE_NUMBER}" \
+            "NAVER_ACCESS_KEY=${NAVER_ACCESS_KEY}" \
+            "NAVER_SECRET_KEY=${NAVER_SECRET_KEY}" > server.env
 
       - name: Upload bundle and deploy with Docker Compose
         run: |

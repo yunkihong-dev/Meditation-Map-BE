@@ -54,7 +54,7 @@ public class AuthController {
         return new EmailAvailabilityResponse(ok);
     }
 
-    @Operation(summary = "회원가입용 휴대폰 인증 요청", description = "6자리 OTP — channeltalk 이면 채널톡 UserChat, log 이면 서버 로그")
+    @Operation(summary = "회원가입용 휴대폰 인증 요청", description = "6자리 OTP — naver 이면 SENS 문자 발송, log 이면 서버 로그")
     @PostMapping("/phone/signup/send-otp")
     public void sendSignupPhoneOtp(@Valid @RequestBody SignupPhoneSendOtpRequest body) {
         phoneSignupVerificationApplicationService.requestSignupPhoneOtp(body.phone());

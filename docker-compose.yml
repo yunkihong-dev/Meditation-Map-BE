@@ -1,8 +1,21 @@
 services:
+  # :80 진입점. /image/ → MinIO, 그 외 → app 으로 분기하는 리버스 프록시.
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+      - minio
+    restart: unless-stopped
+
   app:
     build: .
-    ports:
-      - "8080:8080"
+    # 외부 노출은 nginx 가 담당. 앱은 내부 네트워크에서 app:80 으로만 접근.
+    expose:
+      - "80"
     # 같은 폴더의 .env 를 컨테이너 프로세스 env 로 넘김(application.yml 의 ${NAVER_SMS_ID} 등)
     env_file:
       - .env
@@ -20,20 +33,14 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio12345}
       MINIO_BUCKET: ${MINIO_BUCKET:-meditation-media}
-      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-http://localhost:9000}
+      # nginx 의 /image 경로로 노출 (브라우저가 보는 공개 베이스). 운영은 https://도메인/image 로 덮어씀.
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-http://localhost/image}
       JWT_SECRET: ${JWT_SECRET:-}
       APP_ADMIN_LOGIN_ID: ${APP_ADMIN_LOGIN_ID:-admin}
       APP_ADMIN_BOOTSTRAP_PASSWORD: ${APP_ADMIN_BOOTSTRAP_PASSWORD:-admin}
       APP_ADMIN_BOOTSTRAP_EMAIL: ${APP_ADMIN_BOOTSTRAP_EMAIL:-admin@internal.local}
-      PHONE_SMS_PROVIDER: ${PHONE_SMS_PROVIDER:-channeltalk}
+      PHONE_SMS_PROVIDER: ${PHONE_SMS_PROVIDER:-log}
       PHONE_OTP_HMAC_SECRET: ${PHONE_OTP_HMAC_SECRET:-}
-      PHONE_SNS_REGION: ${PHONE_SNS_REGION:-ap-northeast-2}
-      PHONE_HTTP_SMS_URL: ${PHONE_HTTP_SMS_URL:-}
-      PHONE_HTTP_SMS_BEARER_TOKEN: ${PHONE_HTTP_SMS_BEARER_TOKEN:-}
-      CHANNEL_TALK_ACCESS_KEY: ${CHANNEL_TALK_ACCESS_KEY:-}
-      CHANNEL_TALK_ACCESS_SECRET: ${CHANNEL_TALK_ACCESS_SECRET:-}
-      CHANNEL_TALK_BOT_NAME: ${CHANNEL_TALK_BOT_NAME:-}
-      CHANNEL_TALK_BASE_URL: ${CHANNEL_TALK_BASE_URL:-https://api.channel.io}
       NAVER_SMS_ID: ${NAVER_SMS_ID:-}
       NAVER_SMS_PHONE_NUMBER: ${NAVER_SMS_PHONE_NUMBER:-}
       NAVER_ACCESS_KEY: ${NAVER_ACCESS_KEY:-}
@@ -58,6 +65,8 @@ services:
       MYSQL_PASSWORD: meditation
     ports:
       - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
       interval: 5s
@@ -81,6 +90,15 @@ services:
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio12345
+    # 9000(데이터)은 외부로 열지 않는다 — nginx /image/ 로만 접근.
+    # 9001(관리 콘솔)은 운영 시 방화벽 제한 또는 SSH 터널 권장.
+    expose:
+      - "9000"
     ports:
-      - "9000:9000"
       - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  mysql-data:
+  minio-data:
