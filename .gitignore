@@ -22,8 +22,9 @@ build/
 .factorypath
 
 # Compiled / generated
-bin/
-out/
+# 루트 빌드 산출물만 무시 (앵커 없으면 헥사고날 port/out, bin 패키지까지 무시됨)
+/bin/
+/out/
 *.class
 *.log
 *.log.*
