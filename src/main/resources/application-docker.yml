@@ -37,4 +37,5 @@ app:
       access-key: ${MINIO_ACCESS_KEY:minio}
       secret-key: ${MINIO_SECRET_KEY:minio12345}
       bucket: ${MINIO_BUCKET:meditation-media}
-      public-base-url: ${MINIO_PUBLIC_BASE_URL:http://localhost:9000}
+      # 비우면 요청 호스트 기준 /image 로 자동 생성(동일 도메인). 별도 미디어 도메인/CDN 일 때만 지정.
+      public-base-url: ${MINIO_PUBLIC_BASE_URL:}

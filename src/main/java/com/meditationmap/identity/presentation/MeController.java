@@ -10,7 +10,7 @@ import com.meditationmap.identity.presentation.dto.MeResponse;
 import com.meditationmap.identity.presentation.dto.ExpertProfileUpdateRequest;
 import com.meditationmap.identity.presentation.dto.ProfileUpdateRequest;
 import com.meditationmap.storage.application.FileUploadService;
-import com.meditationmap.storage.infrastructure.minio.MinioStorageProperties;
+import com.meditationmap.storage.infrastructure.minio.PublicMediaUrlResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +40,7 @@ public class MeController {
     private final MemberSpringDataRepository memberRepository;
     private final ProfileImageAttachmentApplicationService profileImages;
     private final MemberProfileApplicationService memberProfiles;
-    private final MinioStorageProperties storageProperties;
+    private final PublicMediaUrlResolver mediaUrlResolver;
     private final ObjectProvider<FileUploadService> fileUploadService;
 
     @Operation(summary = "내 정보 (JWT 또는 mm_access_token 쿠키)")
@@ -151,7 +151,6 @@ public class MeController {
     }
 
     private String publicUrlFor(String objectKey) {
-        String base = storageProperties.publicBaseUrl().replaceAll("/$", "");
-        return base + "/" + storageProperties.bucket() + "/" + objectKey;
+        return mediaUrlResolver.urlFor(objectKey);
     }
 }

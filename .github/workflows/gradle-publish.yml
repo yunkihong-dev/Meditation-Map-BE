@@ -2,7 +2,8 @@
 # - CI: docker compose build app 로 Dockerfile 검증 (실제 빌드는 멀티스테이지 Dockerfile 내부 Gradle 이 수행)
 # - CD: GitHub Secrets 로 .env 작성 → 서버에 같이 업로드 후 docker compose up
 # - 진입점은 nginx(:80) 리버스 프록시: /image/ → MinIO(내부 9000), 그 외 → app. nginx/default.conf 가 deploy.tgz 에 포함됨.
-#   ⚠️ MINIO_PUBLIC_BASE_URL 은 이제 nginx 경로 기준 → 운영값 예: https://도메인/image (포트 9000 노출 불필요)
+#   MINIO_PUBLIC_BASE_URL 은 선택: 비우면 앱이 요청 호스트 기준 /image 로 자동 생성(API 와 동일 도메인).
+#   별도 미디어 도메인/CDN(예: https://media.도메인) 일 때만 지정. 포트 9000 외부 노출 불필요.
 # Secrets: SSH_KEY, SERVER_HOST, SERVER_PORT, SERVER_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
 #          KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET,
 #          OAUTH2_FRONTEND_CALLBACK_URL, MINIO_PUBLIC_BASE_URL, JWT_SECRET (권장), APP_CORS_ALLOWED_ORIGINS (선택),

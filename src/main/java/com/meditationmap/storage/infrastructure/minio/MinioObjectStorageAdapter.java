@@ -18,6 +18,7 @@ public class MinioObjectStorageAdapter implements ObjectStoragePort {
 
     private final S3Client s3Client;
     private final MinioStorageProperties properties;
+    private final PublicMediaUrlResolver urlResolver;
 
     @Override
     public StoredObject put(String originalFilename, String contentType, byte[] content) {
@@ -33,7 +34,7 @@ public class MinioObjectStorageAdapter implements ObjectStoragePort {
                         .contentType(ct)
                         .build(),
                 RequestBody.fromBytes(content));
-        return new StoredObject(key, publicUrlFor(key));
+        return new StoredObject(key, urlResolver.urlFor(key));
     }
 
     private String buildObjectKey(String originalFilename) {
@@ -47,10 +48,5 @@ public class MinioObjectStorageAdapter implements ObjectStoragePort {
         }
         String day = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
         return "uploads/" + day + "/" + UUID.randomUUID() + "-" + safe;
-    }
-
-    private String publicUrlFor(String objectKey) {
-        String base = properties.publicBaseUrl().replaceAll("/$", "");
-        return base + "/" + properties.bucket() + "/" + objectKey;
     }
 }
