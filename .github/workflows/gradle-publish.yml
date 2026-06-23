@@ -48,6 +48,9 @@ jobs:
 
       - name: Create deployment archive
         run: |
+          # 아카이브를 압축 대상(.) 밖($RUNNER_TEMP)에 쓴다.
+          # 같은 디렉터리에 만들면 tar 가 자기 출력 파일 때문에
+          # "tar: .: file changed as we read it" (exit 1) 로 실패한다.
           tar \
             --exclude='./.git' \
             --exclude='./.gradle' \
@@ -55,7 +58,7 @@ jobs:
             --exclude='./bin' \
             --exclude='./.env' \
             --exclude='./.env.*' \
-            -czf deploy.tgz .
+            -czf "$RUNNER_TEMP/deploy.tgz" .
 
       - name: Setup SSH
         run: |
@@ -107,7 +110,7 @@ jobs:
         run: |
           set -euo pipefail
           scp -P ${{ secrets.SERVER_PORT }} \
-            deploy.tgz \
+            "$RUNNER_TEMP/deploy.tgz" \
             server.env \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
 
