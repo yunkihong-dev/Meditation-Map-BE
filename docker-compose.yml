@@ -12,6 +12,20 @@ services:
       - minio
     restart: unless-stopped
 
+  # Cloudflare Tunnel: 엣지에서 HTTPS 종료 후 아웃바운드 터널로 nginx:80 에 전달.
+  # 포트포워딩·인증서 불필요. CF 대시보드에서 public hostname → http://nginx:80 매핑.
+  # CLOUDFLARE_TUNNEL_TOKEN 이 비어 있으면(로컬) 이 서비스는 띄우지 않는다(profiles).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    profiles:
+      - tunnel
+
   app:
     build: .
     # 외부 노출은 nginx 가 담당. 앱은 내부 네트워크에서 app:80 으로만 접근.
