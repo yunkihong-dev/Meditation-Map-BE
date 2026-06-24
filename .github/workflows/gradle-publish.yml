@@ -116,7 +116,9 @@ jobs:
       - name: Upload bundle and deploy with Docker Compose
         run: |
           set -euo pipefail
-          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          # -4: IPv4 강제. GitHub 러너는 IPv6 경로가 없어, 호스트가 AAAA 를 가지면
+          #     ssh 가 IPv6 시도 → "Network is unreachable" 로 실패한다.
+          SSH_OPTS="-4 -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
           scp $SSH_OPTS -P ${{ secrets.SERVER_PORT }} \
             "$RUNNER_TEMP/deploy.tgz" \
             server.env \
