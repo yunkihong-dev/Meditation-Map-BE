@@ -67,11 +67,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # 타임아웃 15s, 실패해도 진행(아래 scp/ssh 가 accept-new 로 호스트키 처리).
-          # ssh-keyscan 만 죽어서 배포 전체가 멈추는 것을 방지.
-          ssh-keyscan -T 15 -p ${{ secrets.SERVER_PORT }} \
-            ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || \
-            echo "ssh-keyscan 실패(무시) — scp/ssh 가 accept-new 로 진행"
 
       - name: Write server .env from GitHub Secrets
         env:
@@ -139,4 +134,4 @@ jobs:
             docker compose up -d --no-recreate mysql redis minio; \
             docker compose up -d --build --no-deps --force-recreate app; \
             docker compose up -d --no-deps nginx; \
-            if grep -Eq '^CLOUDFLARE_TUNNEL_TOKEN=.+' .env; then docker compose up -d --no-deps cloudflared; fi"
+            docker compose up -d --no-deps cloudflared"
