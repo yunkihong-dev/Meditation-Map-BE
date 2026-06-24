@@ -97,6 +97,8 @@ app:
     secret: ${JWT_SECRET:change-this-to-a-very-long-secret-key-for-hs256-min-256-bits-please-change-in-prod}
     expiration-ms: ${JWT_EXPIRATION_MS:604800000}
     cookie-secure: ${JWT_COOKIE_SECURE:false}
+    # 동일 도메인이면 Lax. 프론트가 다른 도메인(크로스사이트)이면 None 필요(+ cookie-secure=true, HTTPS).
+    cookie-same-site: ${JWT_COOKIE_SAME_SITE:Lax}
 
   admin:
     bootstrap-login-id: ${APP_ADMIN_LOGIN_ID:admin}

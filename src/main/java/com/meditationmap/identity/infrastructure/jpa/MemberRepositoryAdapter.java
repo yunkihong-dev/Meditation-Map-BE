@@ -57,6 +57,14 @@ public class MemberRepositoryAdapter implements MemberRepository {
     }
 
     @Override
+    public boolean existsByLoginId(String loginId) {
+        if (loginId == null || loginId.isBlank()) {
+            return false;
+        }
+        return springData.existsByLoginId(loginId.trim());
+    }
+
+    @Override
     public boolean existsByPhoneE164(String phoneE164Digits) {
         return springData.existsByPhoneE164(phoneE164Digits);
     }

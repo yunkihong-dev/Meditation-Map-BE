@@ -14,5 +14,7 @@ public interface MemberRepository {
 
     boolean existsByEmail(Email email);
 
+    boolean existsByLoginId(String loginId);
+
     boolean existsByPhoneE164(String phoneE164Digits);
 }

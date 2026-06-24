@@ -30,6 +30,12 @@ management:
       show-details: always
 
 app:
+  jwt:
+    # 운영은 HTTPS(Cloudflare) → 인증 쿠키 Secure. 프론트가 다른 도메인이어도 동작하도록 SameSite=None.
+    # (동일 도메인만 쓸 거면 JWT_COOKIE_SAME_SITE=Lax 로 덮으면 됨)
+    cookie-secure: ${JWT_COOKIE_SECURE:true}
+    cookie-same-site: ${JWT_COOKIE_SAME_SITE:None}
+
   storage:
     minio:
       enabled: ${MINIO_ENABLED:true}

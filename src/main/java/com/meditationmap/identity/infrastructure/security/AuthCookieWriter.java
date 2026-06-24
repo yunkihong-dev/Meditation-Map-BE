@@ -18,6 +18,11 @@ public class AuthCookieWriter {
     @Value("${app.jwt.cookie-secure:false}")
     private boolean cookieSecure;
 
+    // 프론트가 API 와 다른 도메인이면(크로스사이트) None 이어야 쿠키가 저장·전송·삭제된다.
+    // None 은 Secure=true 가 필수(HTTPS). 동일 도메인이면 Lax 로 둬도 된다.
+    @Value("${app.jwt.cookie-same-site:Lax}")
+    private String cookieSameSite;
+
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
@@ -28,7 +33,7 @@ public class AuthCookieWriter {
                         .secure(cookieSecure)
                         .path("/")
                         .maxAge(Duration.ofMillis(expirationMs))
-                        .sameSite("Lax")
+                        .sameSite(cookieSameSite)
                         .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
@@ -52,19 +57,20 @@ public class AuthCookieWriter {
                         .secure(cookieSecure)
                         .path("/")
                         .maxAge(Duration.ofMillis(expirationMs))
-                        .sameSite("Lax")
+                        .sameSite(cookieSameSite)
                         .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private void clearCookie(HttpServletResponse response, String name) {
+        // 삭제 쿠키는 set 과 동일 속성(secure/sameSite/path)이어야 브라우저가 매칭해 지운다.
         ResponseCookie cookie =
                 ResponseCookie.from(name, "")
                         .httpOnly(true)
                         .secure(cookieSecure)
                         .path("/")
                         .maxAge(Duration.ZERO)
-                        .sameSite("Lax")
+                        .sameSite(cookieSameSite)
                         .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }

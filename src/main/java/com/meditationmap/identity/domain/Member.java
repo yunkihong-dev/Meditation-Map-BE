@@ -61,6 +61,15 @@ public class Member {
         return new Member(id, loginId.trim(), email, hashedPassword, null, null, null, staffRole);
     }
 
+    /** 명상 전문가 계정 (관리자가 대신 생성, 아이디 로그인) */
+    public static Member registerExpertAccount(
+            MemberId id, String loginId, Email email, String hashedPassword) {
+        if (!StringUtils.hasText(loginId)) {
+            throw new DomainArgumentException(ErrorCode.INVALID_REQUEST_BODY);
+        }
+        return new Member(id, loginId.trim(), email, hashedPassword, null, null, null, MemberRole.EXPERT);
+    }
+
     public Member withLinkedOAuth(String provider, String subject) {
         return new Member(id, loginId, email, passwordHash, provider, subject, phoneE164Digits, role);
     }

@@ -13,6 +13,8 @@ public enum ErrorCode {
 
     INVALID_OAUTH_SIGNUP_TOKEN(HttpStatus.BAD_REQUEST,"유효하지 않거나 만료된 OAuth 가입 토큰입니다. 초기 회원가입 절차를 다시 시작해 주세요."),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
+    LOGIN_ID_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
+    PASSWORD_POLICY_VIOLATION(HttpStatus.BAD_REQUEST, "비밀번호는 8자 이상이며 영문·숫자·특수문자를 모두 포함해야 합니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
 
     INVALID_PHONE_NUMBER(HttpStatus.BAD_REQUEST, "유효한 휴대전화번호 형식이 아닙니다. 예: 01012345678"),

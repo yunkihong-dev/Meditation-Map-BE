@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.meditationmap.place.application.PlaceProgramNormalizer;
 import com.meditationmap.admin.application.AdminCatalogService;
+import com.meditationmap.admin.application.AdminExpertAccountService;
 import com.meditationmap.admin.application.AdminMetricsService;
 import com.meditationmap.admin.application.AdminMetricsSeriesBuilder.AdminMetricsSeries;
 import com.meditationmap.admin.application.ApiTrafficQueryService;
@@ -41,6 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final AdminCatalogService catalogService;
+    private final AdminExpertAccountService expertAccountService;
     private final AdminMetricsService metricsService;
     private final HttpTrafficQueryService httpTrafficQueryService;
     private final MemberMetricsQueryService memberMetricsQueryService;
@@ -117,6 +119,21 @@ public class AdminController {
     @PostMapping("/experts")
     public Map<String, Object> createExpert(@Valid @RequestBody AdminDto.AdminExpertCreateRequest body) {
         return expertRow(catalogService.createExpert(body.data()));
+    }
+
+    @Operation(summary = "전문가 아이디 사용 가능 여부")
+    @GetMapping("/experts/login-id-availability")
+    public Map<String, Object> expertLoginIdAvailability(@RequestParam String loginId) {
+        return Map.of("available", expertAccountService.isLoginIdAvailable(loginId));
+    }
+
+    @Operation(summary = "전문가 계정 생성 (아이디·이메일·비밀번호 + 프로필)")
+    @PostMapping("/experts/accounts")
+    public Map<String, Object> createExpertAccount(
+            @Valid @RequestBody AdminDto.AdminExpertAccountCreateRequest body) {
+        return expertRow(
+                expertAccountService.createExpertAccount(
+                        body.loginId(), body.email(), body.password(), body.data()));
     }
 
     @PutMapping("/experts/{id}")
