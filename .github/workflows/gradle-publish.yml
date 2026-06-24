@@ -134,15 +134,9 @@ jobs:
             mv -f /tmp/server.env \"\$DEPLOY_PATH/.env\"; \
             chmod 600 \"\$DEPLOY_PATH/.env\"; \
             rm -f /tmp/deploy.tgz /tmp/server.env; \
-            chmod +x \"\$DEPLOY_PATH/gradlew\" 2>/dev/null || true; \
             cd \"\$DEPLOY_PATH\"; \
             export PATH=\"/opt/homebrew/bin:/usr/local/bin:\$PATH\"; \
-            if ! command -v docker >/dev/null 2>&1; then echo 'ERROR: docker 가 PATH 에 없음 (mac brew/Docker Desktop/Colima 설치·경로 확인)'; exit 1; fi; \
-            if ! docker info >/dev/null 2>&1; then \
-              if command -v colima >/dev/null 2>&1; then echo 'Colima 미기동 → 시작'; colima start; \
-              else echo 'ERROR: docker 데몬 미실행 (Docker Desktop/Colima 를 먼저 띄워주세요)'; exit 1; fi; \
-            fi; \
             docker compose up -d --no-recreate mysql redis minio; \
             docker compose up -d --build --no-deps --force-recreate app; \
             docker compose up -d --no-deps nginx; \
-            if grep -Eq '^CLOUDFLARE_TUNNEL_TOKEN=.+' .env; then docker compose up -d --no-deps cloudflared; else echo 'cloudflared: CLOUDFLARE_TUNNEL_TOKEN 미설정 → skip'; fi"
+            if grep -Eq '^CLOUDFLARE_TUNNEL_TOKEN=.+' .env; then docker compose up -d --no-deps cloudflared; fi"
