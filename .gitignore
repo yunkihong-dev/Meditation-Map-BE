@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# TLS 인증서(Cloudflare Origin Cert) — 서버에만 두고 커밋 금지
+nginx/certs/
+
 # OS
 .DS_Store
 Thumbs.db
