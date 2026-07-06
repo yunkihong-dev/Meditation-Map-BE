@@ -37,11 +37,11 @@ public class SecurityConfig {
     private final NaverAwareOAuth2UserService naverAwareOAuth2UserService;
 
     @Value(
-            "${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}")
+            "${app.cors.allowed-origins}")
     private String allowedOrigins;
 
     /** Spring 기본 /login 대신 보낼 프론트 URL ({@code /profile}). */
-    @Value("${app.oauth2.frontend-auth-entry-url:http://localhost:3000/profile}")
+    @Value("${app.oauth2.frontend-auth-entry-url}")
     private String oauthFrontendAuthEntryUrl;
 
     /**
