@@ -37,11 +37,11 @@ app:
     cookie-same-site: ${JWT_COOKIE_SAME_SITE:None}
 
   storage:
-    minio:
-      enabled: ${MINIO_ENABLED:true}
-      endpoint: ${MINIO_ENDPOINT:http://minio:9000}
-      access-key: ${MINIO_ACCESS_KEY:minio}
-      secret-key: ${MINIO_SECRET_KEY:minio12345}
-      bucket: ${MINIO_BUCKET:meditation-media}
-      # 비우면 요청 호스트 기준 /image 로 자동 생성(동일 도메인). 별도 미디어 도메인/CDN 일 때만 지정.
-      public-base-url: ${MINIO_PUBLIC_BASE_URL:}
+    object-storage:
+      # 로컬 compose 에서도 실제 S3 개발용 버킷을 쓴다(MinIO 제거).
+      # .env 에 STORAGE_BUCKET / STORAGE_PUBLIC_BASE_URL 과 AWS 자격증명이 필요하다.
+      # 스토리지 없이 띄우려면 STORAGE_ENABLED=false 로 두면 업로드 기능만 빠진 채 기동된다.
+      enabled: ${STORAGE_ENABLED:false}
+      region: ${STORAGE_REGION:ap-northeast-2}
+      bucket: ${STORAGE_BUCKET:}
+      public-base-url: ${STORAGE_PUBLIC_BASE_URL:}

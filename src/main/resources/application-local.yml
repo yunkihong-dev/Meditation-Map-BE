@@ -1,4 +1,4 @@
-# 로컬에서 Docker MySQL(호스트 포트 3307) + MinIO(9000) 사용 시:
+# 로컬에서 Docker MySQL(호스트 포트 3307) 사용 시:
 #   docker compose up -d
 #   ./gradlew bootRun --args='--spring.profiles.active=local'
 #
@@ -15,6 +15,10 @@ spring:
 
 app:
   storage:
-    minio:
-      # 로컬 프로필: 기본 켜 둠. 끄려면 .env 에 MINIO_ENABLED=false
-      enabled: ${MINIO_ENABLED:true}
+    object-storage:
+      # 로컬은 기본 꺼 둔다. 업로드까지 테스트하려면 .env 에 아래를 채운다.
+      #   STORAGE_ENABLED=true
+      #   STORAGE_BUCKET=<개발용 S3 버킷>
+      #   STORAGE_PUBLIC_BASE_URL=https://<개발 CloudFront>/media
+      # 자격증명은 `aws configure` 로 잡아 둔 ~/.aws/credentials 를 그대로 쓴다.
+      enabled: ${STORAGE_ENABLED:false}

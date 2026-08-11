@@ -1,0 +1,30 @@
+# CI 전용 런타임 이미지.
+#
+# 루트의 Dockerfile 은 컨테이너 안에서 Gradle 빌드까지 하지만, 여기서는 하지 않는다.
+# 배포 대상이 arm64(Graviton)라서 컨테이너 안에서 빌드하면 QEMU 에뮬레이션이 걸려
+# JVM 빌드가 몇 배로 느려진다.
+#
+# 대신 GitHub Actions 러너(x86)에서 JDK 로 jar 를 먼저 만들고, 여기서는 그 jar 만 복사한다.
+# jar 는 아키텍처 중립이라 buildx --platform linux/arm64 로 arm64 JRE 위에 얹기만 하면 된다.
+FROM eclipse-temurin:17-jre-jammy
+
+WORKDIR /app
+
+RUN groupadd --system app && useradd --system --gid app --home /app app
+
+# CI 가 build/libs/*.jar 를 먼저 만들어 둔 상태여야 한다.
+COPY --chown=app:app build/libs/*.jar app.jar
+
+USER app
+
+# non-root 로 돌리므로 1024 미만 포트는 피한다. 외부 노출은 호스트 80 → 컨테이너 8080 매핑으로 한다.
+EXPOSE 8080
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SERVER_PORT=8080
+
+# 컨테이너 cgroup 한도에 맞춰 힙을 잡는다. compose 의 mem_limit 이 기준이 된다.
+# t3.micro(1GiB) + mem_limit 700m 기준으로 힙은 약 420MB 가 된다.
+# 작은 힙에서는 SerialGC 가 G1 보다 오버헤드가 작다.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -XX:MaxMetaspaceSize=160m -Xss512k -Duser.timezone=Asia/Seoul"
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

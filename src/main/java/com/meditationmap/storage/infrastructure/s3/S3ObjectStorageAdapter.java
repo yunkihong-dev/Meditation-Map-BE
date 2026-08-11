@@ -1,4 +1,4 @@
-package com.meditationmap.storage.infrastructure.minio;
+package com.meditationmap.storage.infrastructure.s3;
 
 import com.meditationmap.storage.application.port.out.ObjectStoragePort;
 import java.time.LocalDate;
@@ -13,11 +13,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.storage.minio.enabled", havingValue = "true")
-public class MinioObjectStorageAdapter implements ObjectStoragePort {
+@ConditionalOnProperty(name = "app.storage.object-storage.enabled", havingValue = "true")
+public class S3ObjectStorageAdapter implements ObjectStoragePort {
 
     private final S3Client s3Client;
-    private final MinioStorageProperties properties;
+    private final ObjectStorageProperties properties;
     private final PublicMediaUrlResolver urlResolver;
 
     @Override

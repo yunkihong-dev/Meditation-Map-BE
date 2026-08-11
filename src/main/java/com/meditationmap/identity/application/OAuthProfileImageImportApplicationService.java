@@ -24,7 +24,7 @@ public class OAuthProfileImageImportApplicationService {
 
     private final ObjectProvider<FileUploadService> signupFileUploadService;
 
-    /** MinIO 업로드가 비활성이거나 URL이 유효하지 않으면 null. */
+    /** 오브젝트 스토리지가 비활성이거나 URL이 유효하지 않으면 null. */
     public String importFromProviderImageUrl(String profilePictureUrl) {
         FileUploadService upload = signupFileUploadService.getIfAvailable();
         if (upload == null || !StringUtils.hasText(profilePictureUrl)) {

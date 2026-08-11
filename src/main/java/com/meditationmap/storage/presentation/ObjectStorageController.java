@@ -17,12 +17,12 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
-@ConditionalOnProperty(name = "app.storage.minio.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.storage.object-storage.enabled", havingValue = "true")
 public class ObjectStorageController {
 
     private final FileUploadService fileUploadService;
 
-    @Operation(summary = "파일 업로드 → MinIO 저장 후 공개 URL 반환 (JWT 필요)")
+    @Operation(summary = "파일 업로드 → S3 저장 후 공개 URL 반환 (JWT 필요)")
     @PostMapping(value = "/storage/objects", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public UploadedObjectResponse upload(@RequestParam("file") MultipartFile file) {
         var r = fileUploadService.upload(file);

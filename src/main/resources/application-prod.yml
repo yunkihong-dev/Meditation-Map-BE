@@ -1,0 +1,67 @@
+# AWS 운영 프로필.
+#
+# 값은 전부 환경변수로 들어온다. 출처는 두 갈래다.
+#   - 비밀 아님: EC2 의 /opt/app/app.env  (Terraform 이 user_data 로 기록)
+#   - 비밀:      /opt/app/secrets.env     (배포 시 Secrets Manager 에서 받아 씀)
+#
+# 이 파일에는 실제 비밀값이 없어야 한다. 커밋되는 파일이다.
+
+spring:
+  jpa:
+    hibernate:
+      # 앱이 스키마를 건드리지 못하게 막는다. 스키마 변경은 마이그레이션으로만.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        # 운영에서 SQL 을 예쁘게 찍을 이유가 없다(로그량과 CloudWatch 비용).
+        format_sql: false
+
+  data:
+    redis:
+      # 같은 인스턴스의 compose 네트워크 안에 있는 redis 컨테이너
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: ${SERVER_PORT:80}
+  # CloudFront 뒤에 있다. X-Forwarded-Proto/Host 를 반영해야 OAuth redirect_uri 가
+  # https + 실제 도메인으로 만들어진다. (CloudFront 오리진 설정에서 두 헤더를 주입한다)
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 배포 스크립트 헬스체크 + 메트릭 수집용. CloudFront 를 통해서도 열려 있으므로
+        # 외부에 노출하고 싶지 않다면 여기서 prometheus 를 빼고 SSM 터널로만 본다.
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+app:
+  jwt:
+    # HTTPS 전용 쿠키. 웹/API 가 같은 상위 도메인(app./api.)이면 Lax 로 충분하다.
+    # 커스텀 도메인 없이 *.cloudfront.net 을 쓰는 동안에는 None 이어야 한다.
+    cookie-secure: ${JWT_COOKIE_SECURE:true}
+    cookie-same-site: ${JWT_COOKIE_SAME_SITE:Lax}
+
+  storage:
+    object-storage:
+      enabled: ${STORAGE_ENABLED:true}
+      region: ${STORAGE_REGION:ap-northeast-2}
+      bucket: ${STORAGE_BUCKET}
+      # 예: https://app.example.com/media  → 최종 URL 은 {base}/{objectKey}
+      public-base-url: ${STORAGE_PUBLIC_BASE_URL}
+      # 자격증명은 EC2 인스턴스 역할에서 온다. 버킷 생성·정책은 Terraform 이 하고
+      # 앱은 객체만 다룬다(IAM 정책도 PutObject/GetObject 까지만 허용).
+
+  auth:
+    phone:
+      sms-provider: ${PHONE_SMS_PROVIDER:naver}
+
+logging:
+  level:
+    root: INFO
+    com.meditationmap: INFO
+    org.springframework.security: WARN
