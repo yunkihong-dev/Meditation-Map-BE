@@ -19,6 +19,13 @@ configurations {
     }
 }
 
+// 실행 불가능한 -plain.jar 는 만들지 않는다.
+// build/libs 에 jar 가 두 개 있으면 Dockerfile 의 `COPY build/libs/*.jar app.jar` 가
+// "복사 대상이 여러 개인데 목적지가 디렉터리가 아니다" 로 실패한다.
+tasks.named('jar') {
+    enabled = false
+}
+
 repositories {
     mavenCentral()
 }

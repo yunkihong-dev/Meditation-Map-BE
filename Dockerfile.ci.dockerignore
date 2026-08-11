@@ -1,0 +1,30 @@
+# Dockerfile.ci 전용 컨텍스트 제외 규칙.
+# BuildKit 은 `<Dockerfile 이름>.dockerignore` 를 우선 적용한다.
+#
+# 기본 .dockerignore 는 build/ 를 통째로 제외하는데(루트 Dockerfile 은 컨테이너 안에서 빌드하므로 맞다),
+# Dockerfile.ci 는 CI 가 미리 만들어 둔 build/libs/*.jar 를 복사하는 구조라 그 제외를 풀어야 한다.
+
+.git
+.gitignore
+.idea
+*.iml
+.gradle
+out
+bin
+**/.DS_Store
+docker-compose.yml
+
+# 소스는 필요 없다. jar 만 있으면 된다.
+src
+gradle
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+nginx
+
+# build 아래에서 jar 만 남긴다.
+build/*
+!build/libs
+build/libs/*
+!build/libs/*.jar

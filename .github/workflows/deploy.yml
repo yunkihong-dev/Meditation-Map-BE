@@ -1,0 +1,134 @@
+name: Deploy backend
+
+# main 푸시 → jar 빌드 → arm64 이미지 → ECR → SSM 으로 EC2 재배포
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "재배포할 기존 이미지 태그 (비우면 새로 빌드)"
+        required: false
+        type: string
+
+concurrency:
+  # 배포가 겹치면 인스턴스에서 compose 가 동시에 돌아 상태가 꼬인다.
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: meditation-map-be
+
+permissions:
+  contents: read
+  id-token: write # OIDC 로 AWS 역할을 assume 하는 데 필요
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve image tag
+        id: meta
+        run: |
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >>"$GITHUB_OUTPUT"
+            echo "build=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA::12}" >>"$GITHUB_OUTPUT"
+            echo "build=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.meta.outputs.build == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      # 컨테이너 안에서 Gradle 을 돌리지 않는다. jar 는 아키텍처 중립이라
+      # 러너에서 만들고 이미지에는 복사만 하면 된다(빌드가 훨씬 빠르다).
+      - name: Build jar
+        if: steps.meta.outputs.build == 'true'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bootJar --no-daemon
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.meta.outputs.build == 'true'
+
+      # 배포 대상이 t3.micro(x86_64)이므로 amd64 로 빌드한다.
+      # 인스턴스를 t4g 계열(arm64)로 바꾸면 이 값도 linux/arm64 로 함께 바꿔야 한다.
+      - name: Build and push image
+        if: steps.meta.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.ci
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # SSH 키 없이 배포한다. 인스턴스는 22번 포트를 아예 열지 않는다.
+      - name: Deploy via SSM
+        id: ssm
+        run: |
+          set -euo pipefail
+          COMMAND_ID=$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "${{ secrets.AWS_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "deploy ${{ steps.meta.outputs.tag }}" \
+            --parameters commands="/opt/app/deploy.sh ${{ steps.meta.outputs.tag }}" \
+            --timeout-seconds 600 \
+            --query "Command.CommandId" --output text)
+
+          echo "command_id=$COMMAND_ID" >>"$GITHUB_OUTPUT"
+          echo "SSM command: $COMMAND_ID"
+
+          # send-command 는 비동기다. 끝날 때까지 직접 기다린다.
+          for _ in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ secrets.AWS_INSTANCE_ID }}" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+
+            case "$STATUS" in
+              Success) echo "deploy succeeded"; exit 0 ;;
+              Failed|Cancelled|TimedOut) echo "deploy status: $STATUS"; break ;;
+              *) sleep 10 ;;
+            esac
+          done
+
+          echo "::error::deploy did not succeed (status=${STATUS:-unknown})"
+          exit 1
+
+      # 실패했을 때 인스턴스 로그를 보러 들어가지 않아도 되게 여기서 꺼내 준다.
+      - name: Dump deploy output
+        if: always() && steps.ssm.outputs.command_id != ''
+        run: |
+          aws ssm get-command-invocation \
+            --region "$AWS_REGION" \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "${{ secrets.AWS_INSTANCE_ID }}" \
+            --query "{status:Status,stdout:StandardOutputContent,stderr:StandardErrorContent}" \
+            --output text || true
