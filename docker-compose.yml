@@ -1,5 +1,6 @@
 services:
-  # :80 진입점. /image/ → MinIO, 그 외 → app 으로 분기하는 리버스 프록시.
+  # :80 진입점. 모든 요청을 app 으로 넘기는 리버스 프록시.
+  # (예전의 /image/ → MinIO 분기는 제거됐다. 이미지는 S3 + CloudFront 가 서빙한다)
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -12,7 +13,6 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - app
-      - minio
     restart: unless-stopped
 
   # Cloudflare Tunnel: 엣지에서 HTTPS 종료 후 아웃바운드 터널로 nginx:80 에 전달.
@@ -46,13 +46,14 @@ services:
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-docker-dev-placeholder}
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-docker-dev-placeholder}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-docker-dev-placeholder}
-      MINIO_ENABLED: ${MINIO_ENABLED:-true}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio12345}
-      MINIO_BUCKET: ${MINIO_BUCKET:-meditation-media}
-      # 비우면 앱이 요청 호스트 기준 /image 로 자동 생성(API 와 동일 도메인). 별도 미디어 도메인/CDN 일 때만 지정.
-      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-}
+      # 오브젝트 스토리지(S3). 기본은 꺼져 있고, 업로드까지 테스트할 때만 .env 에 채운다.
+      # 자격증명은 ~/.aws/credentials 대신 아래 두 값을 .env 에 넣어 넘긴다(컨테이너 안에는 ~/.aws 가 없다).
+      STORAGE_ENABLED: ${STORAGE_ENABLED:-false}
+      STORAGE_REGION: ${STORAGE_REGION:-ap-northeast-2}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       JWT_SECRET: ${JWT_SECRET:-}
       APP_ADMIN_LOGIN_ID: ${APP_ADMIN_LOGIN_ID}
       APP_ADMIN_BOOTSTRAP_PASSWORD: ${APP_ADMIN_BOOTSTRAP_PASSWORD}
@@ -65,14 +66,12 @@ services:
       NAVER_SECRET_KEY: ${NAVER_SECRET_KEY:-}
       NAVER_SMS_BASE_URL: ${NAVER_SMS_BASE_URL:-https://sens.apigw.ntruss.com}
       # 앱에서 app.cors.allowed-origins 로 바인딩 (프론트 Origin 과 콤마로 맞춤)
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS}
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
 
   mysql:
     image: mysql:8.4
@@ -102,21 +101,6 @@ services:
       timeout: 3s
       retries: 10
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio12345
-    # 9000(데이터)은 외부로 열지 않는다 — nginx /image/ 로만 접근.
-    # 9001(관리 콘솔)은 운영 시 방화벽 제한 또는 SSH 터널 권장.
-    expose:
-      - "9000"
-    ports:
-      - "9001:9001"
-    volumes:
-      - minio-data:/data
 
 volumes:
   mysql-data:
-  minio-data:

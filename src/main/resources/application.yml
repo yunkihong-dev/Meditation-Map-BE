@@ -106,14 +106,16 @@ app:
     bootstrap-email: ${APP_ADMIN_BOOTSTRAP_EMAIL:admin@internal.local}
 
   storage:
-    minio:
-      # .env: MINIO_ENABLED, MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_PUBLIC_BASE_URL
-      enabled: ${MINIO_ENABLED:false}
-      endpoint: ${MINIO_ENDPOINT}
-      access-key: ${MINIO_ACCESS_KEY}
-      secret-key: ${MINIO_SECRET_KEY}
-      bucket: ${MINIO_BUCKET:meditation-media}
-      public-base-url: ${MINIO_PUBLIC_BASE_URL
+    object-storage:
+      # AWS S3. 자격증명은 프로퍼티로 받지 않고 기본 체인(인스턴스 역할 / 환경변수 /
+      # ~/.aws/credentials)에서 찾는다.
+      # .env: STORAGE_ENABLED, STORAGE_REGION, STORAGE_BUCKET, STORAGE_PUBLIC_BASE_URL
+      enabled: ${STORAGE_ENABLED:false}
+      region: ${STORAGE_REGION:ap-northeast-2}
+      bucket: ${STORAGE_BUCKET:meditation-media}
+      # 공개 URL base. 최종 URL 은 {base}/{objectKey}.
+      # 버킷은 비공개이므로 CloudFront 미디어 경로를 넣는다. 예: https://app.example.com/media
+      public-base-url: ${STORAGE_PUBLIC_BASE_URL:}
 
   cors:
     # APP_CORS_ALLOWED_ORIGINS (.env). env 없으면 아래 로컬 3000 기본.

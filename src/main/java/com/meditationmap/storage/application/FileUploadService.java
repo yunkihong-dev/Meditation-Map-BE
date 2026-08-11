@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.storage.minio.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.storage.object-storage.enabled", havingValue = "true")
 public class FileUploadService {
 
     private final ObjectStoragePort objectStorage;

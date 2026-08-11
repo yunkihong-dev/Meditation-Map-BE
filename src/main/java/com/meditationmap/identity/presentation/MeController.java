@@ -10,7 +10,7 @@ import com.meditationmap.identity.presentation.dto.MeResponse;
 import com.meditationmap.identity.presentation.dto.ExpertProfileUpdateRequest;
 import com.meditationmap.identity.presentation.dto.ProfileUpdateRequest;
 import com.meditationmap.storage.application.FileUploadService;
-import com.meditationmap.storage.infrastructure.minio.PublicMediaUrlResolver;
+import com.meditationmap.storage.infrastructure.s3.PublicMediaUrlResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
