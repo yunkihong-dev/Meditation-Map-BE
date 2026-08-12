@@ -19,6 +19,8 @@ concurrency:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: meditation-map-be
+  # 배포 대상 인스턴스를 찾는 Name 태그 (Terraform 의 "${project}-${environment}-app")
+  INSTANCE_NAME_TAG: meditation-map-prod-app
 
 permissions:
   contents: read
@@ -87,22 +89,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # GitHub Secret 은 붙여넣기 과정에서 끝에 개행이나 공백이 섞이기 쉽다.
-      # 그대로 쓰면 SendCommand 가 "i-xxxx\n" 을 대상으로 잡고, IAM 정책의
-      # instance/i-xxxx 와 문자열이 달라 AccessDenied 가 난다. 원인이 로그에
-      # 드러나지 않아 디버깅이 오래 걸리므로 여기서 정리하고 형식을 검증한다.
+      # 인스턴스 ID 를 시크릿으로 들고 있지 않는다. user_data 나 인스턴스 타입을
+      # 바꾸면 EC2 가 교체되면서 ID 가 달라지는데, 그때마다 시크릿을 손으로 갱신해야 하고
+      # 놓치면 마스킹된 AccessDenied 로 나타나 원인을 찾기 어렵다. 태그로 매번 조회한다.
       - name: Resolve target instance
         run: |
           set -euo pipefail
-          ID="$(printf '%s' '${{ secrets.AWS_INSTANCE_ID }}' | tr -d '[:space:]')"
-          if [ -z "$ID" ]; then
-            echo "::error::AWS_INSTANCE_ID 시크릿이 비어 있습니다."
+          ID=$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --filters "Name=tag:Name,Values=${INSTANCE_NAME_TAG}" \
+                      "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" --output text)
+
+          COUNT=$(printf '%s' "$ID" | wc -w | tr -d ' ')
+          if [ "$COUNT" -ne 1 ]; then
+            echo "::error::태그 ${INSTANCE_NAME_TAG} 로 실행 중인 인스턴스가 ${COUNT}개입니다 (1개여야 함)"
             exit 1
           fi
-          case "$ID" in
-            i-*) ;;
-            *) echo "::error::AWS_INSTANCE_ID 형식이 잘못됐습니다 (i- 로 시작해야 함)"; exit 1 ;;
-          esac
+
+          echo "target instance: $ID"
           echo "INSTANCE_ID=$ID" >>"$GITHUB_ENV"
 
       # SSH 키 없이 배포한다. 인스턴스는 22번 포트를 아예 열지 않는다.
