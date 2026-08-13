@@ -22,10 +22,22 @@ spring:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
 
+  # redirect_uri 를 {baseUrl} 로 조립하면 http://api...:443/... 이 된다.
+  # CloudFront 가 오리진에 평문 HTTP 로 붙는데 X-Forwarded-Proto 를 주입할 방법이 없어서다.
+  # 스킴 추론에 맡기지 않고 절대 주소로 지정한다.
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: "${OAUTH2_REDIRECT_BASE_URL}/login/oauth2/code/google"
+          kakao:
+            redirect-uri: "${OAUTH2_REDIRECT_BASE_URL}/login/oauth2/code/kakao"
+          naver:
+            redirect-uri: "${OAUTH2_REDIRECT_BASE_URL}/login/oauth2/code/naver"
+
 server:
   port: ${SERVER_PORT:80}
-  # CloudFront 뒤에 있다. X-Forwarded-Proto/Host 를 반영해야 OAuth redirect_uri 가
-  # https + 실제 도메인으로 만들어진다. (CloudFront 오리진 설정에서 두 헤더를 주입한다)
   forward-headers-strategy: framework
 
 management:
