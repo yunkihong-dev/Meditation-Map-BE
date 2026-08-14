@@ -45,6 +45,15 @@ public class SecurityConfig {
     private String oauthFrontendAuthEntryUrl;
 
     /**
+     * 소셜 로그인 결과를 처리하는 프론트 페이지. 성공·실패 모두 이곳으로 보낸다.
+     *
+     * <p>실패를 로그인 진입 화면으로 되돌리면 사용자에게는 "그냥 처음 화면으로 돌아간 것"으로만 보여
+     * 무엇이 잘못됐는지 알 수 없다. 콜백 페이지가 error 파라미터를 받아 화면에 표시한다.
+     */
+    @Value("${app.oauth2.frontend-callback-url}")
+    private String oauthFrontendCallbackUrl;
+
+    /**
      * OAuth2(카카오·구글·네이버)와 JWT API 한 체인. OAuth는 세션·콜백이 필요하므로 IF_REQUIRED.
      * JWT 필터는 /oauth2, /login/oauth2 에서 실행하지 않음(콜백 세션 깨지지 않도록).
      */
@@ -104,7 +113,7 @@ public class SecurityConfig {
                                 oauth2.loginPage(oauthFrontendAuthEntryUrl)
                                         .failureHandler(
                                                 new OAuth2LoginFailureRedirectHandler(
-                                                        oauthFrontendAuthEntryUrl))
+                                                        oauthFrontendCallbackUrl))
                                         .userInfoEndpoint(
                                                 ui ->
                                                         ui.userService(
