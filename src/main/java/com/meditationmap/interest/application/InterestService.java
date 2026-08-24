@@ -1,9 +1,9 @@
-package com.meditationmap.classtype.application;
+package com.meditationmap.interest.application;
 
-import com.meditationmap.classtype.infrastructure.jpa.ClassTypeJpaEntity;
-import com.meditationmap.classtype.infrastructure.jpa.ClassTypeSpringDataRepository;
-import com.meditationmap.classtype.presentation.dto.ClassTypeResponse;
-import com.meditationmap.classtype.presentation.dto.ClassTypeUpsertRequest;
+import com.meditationmap.interest.infrastructure.jpa.InterestJpaEntity;
+import com.meditationmap.interest.infrastructure.jpa.InterestSpringDataRepository;
+import com.meditationmap.interest.presentation.dto.InterestResponse;
+import com.meditationmap.interest.presentation.dto.InterestUpsertRequest;
 import com.meditationmap.shared.exception.DomainArgumentException;
 import com.meditationmap.shared.exception.ErrorCode;
 import com.meditationmap.shared.exception.InfrastructureException;
@@ -17,40 +17,42 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class ClassTypeService {
+public class InterestService {
 
-    private final ClassTypeSpringDataRepository repository;
+    private final InterestSpringDataRepository repository;
 
-    /** 전문가 화면용 — 내려둔 항목은 빼고 줍니다. */
-    public List<ClassTypeResponse> listActive() {
+    /** 사용자·전문가 화면용 — 내려둔 항목은 빼고 줍니다. */
+    public List<InterestResponse> listActive() {
         return repository.findAllByActiveTrueOrderBySortOrderAscNameAsc().stream()
-                .map(ClassTypeService::toResponse)
+                .map(InterestService::toResponse)
                 .toList();
     }
 
     /** 관리자 화면용 — 내려둔 항목까지 전부 줍니다. */
-    public List<ClassTypeResponse> listAll() {
+    public List<InterestResponse> listAll() {
         return repository.findAllByOrderBySortOrderAscNameAsc().stream()
-                .map(ClassTypeService::toResponse)
+                .map(InterestService::toResponse)
                 .toList();
     }
 
     @Transactional
-    public ClassTypeResponse create(ClassTypeUpsertRequest request) {
+    public InterestResponse create(InterestUpsertRequest request) {
         String name = normalizeName(request.name());
         rejectDuplicate(name, null);
 
-        ClassTypeJpaEntity entity = new ClassTypeJpaEntity();
+        InterestJpaEntity entity = new InterestJpaEntity();
         entity.setId(UUID.randomUUID().toString());
         entity.setName(name);
+        entity.setDescription(trimToNull(request.description()));
+        entity.setImageUrl(trimToNull(request.imageUrl()));
         entity.setActive(request.active() == null || request.active());
         entity.setSortOrder(request.sortOrder() != null ? request.sortOrder() : nextSortOrder());
         return toResponse(repository.save(entity));
     }
 
     @Transactional
-    public ClassTypeResponse update(String id, ClassTypeUpsertRequest request) {
-        ClassTypeJpaEntity entity =
+    public InterestResponse update(String id, InterestUpsertRequest request) {
+        InterestJpaEntity entity =
                 repository
                         .findById(id)
                         .orElseThrow(() -> new InfrastructureException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -58,6 +60,8 @@ public class ClassTypeService {
         rejectDuplicate(name, id);
 
         entity.setName(name);
+        entity.setDescription(trimToNull(request.description()));
+        entity.setImageUrl(trimToNull(request.imageUrl()));
         if (request.active() != null) {
             entity.setActive(request.active());
         }
@@ -76,7 +80,7 @@ public class ClassTypeService {
     }
 
     private void rejectDuplicate(String name, String allowedId) {
-        Optional<ClassTypeJpaEntity> existing = repository.findByName(name);
+        Optional<InterestJpaEntity> existing = repository.findByName(name);
         if (existing.isPresent() && !existing.get().getId().equals(allowedId)) {
             throw new DomainArgumentException(ErrorCode.INVALID_PARAMETER);
         }
@@ -84,13 +88,13 @@ public class ClassTypeService {
 
     private int nextSortOrder() {
         return repository.findAllByOrderBySortOrderAscNameAsc().stream()
-                        .mapToInt(ClassTypeJpaEntity::getSortOrder)
+                        .mapToInt(InterestJpaEntity::getSortOrder)
                         .max()
                         .orElse(-1)
                 + 1;
     }
 
-    /** 이름이 곧 전문가 프로필에 저장되는 값이라 앞뒤 공백만 다듬고 그대로 씁니다. */
+    /** 이름이 곧 사용자·전문가 프로필에 저장되는 값이라 앞뒤 공백만 다듬고 그대로 씁니다. */
     private String normalizeName(String raw) {
         String name = raw == null ? "" : raw.trim();
         if (name.isEmpty()) {
@@ -99,7 +103,21 @@ public class ClassTypeService {
         return name;
     }
 
-    private static ClassTypeResponse toResponse(ClassTypeJpaEntity e) {
-        return new ClassTypeResponse(e.getId(), e.getName(), e.isActive());
+    private String trimToNull(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static InterestResponse toResponse(InterestJpaEntity e) {
+        return new InterestResponse(
+                e.getId(),
+                e.getName(),
+                e.getDescription(),
+                e.getImageUrl(),
+                e.getSortOrder(),
+                e.isActive());
     }
 }
