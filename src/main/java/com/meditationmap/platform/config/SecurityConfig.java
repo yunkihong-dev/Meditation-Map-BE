@@ -94,6 +94,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/regions", "/regions/**")
                                         .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/class-types")
+                                        .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/experts", "/experts/**")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/notices", "/notices/**")
