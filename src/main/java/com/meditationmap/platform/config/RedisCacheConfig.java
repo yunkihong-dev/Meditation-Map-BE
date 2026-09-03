@@ -41,6 +41,7 @@ public class RedisCacheConfig {
         perCache.put("place", defaults.entryTtl(Duration.ofSeconds(defaultTtlSeconds)));
         perCache.put("experts", defaults.entryTtl(Duration.ofSeconds(defaultTtlSeconds)));
         perCache.put("expert", defaults.entryTtl(Duration.ofSeconds(defaultTtlSeconds)));
+        perCache.put("banners", defaults.entryTtl(Duration.ofSeconds(defaultTtlSeconds)));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaults)

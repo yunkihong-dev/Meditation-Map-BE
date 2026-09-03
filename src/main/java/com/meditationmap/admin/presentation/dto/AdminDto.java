@@ -42,4 +42,8 @@ public final class AdminDto {
     public record AdminNoticeCreateRequest(@NotNull JsonNode payload) {}
 
     public record AdminNoticeUpdateRequest(@NotNull JsonNode payload) {}
+
+    public record AdminBannerCreateRequest(@NotNull JsonNode payload) {}
+
+    public record AdminBannerUpdateRequest(@NotNull JsonNode payload) {}
 }
