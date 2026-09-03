@@ -100,6 +100,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/notices", "/notices/**")
                                         .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/banners")
+                                        .permitAll()
                                         .requestMatchers(HttpMethod.POST, "/inquiries")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.POST, "/admin/auth/login")

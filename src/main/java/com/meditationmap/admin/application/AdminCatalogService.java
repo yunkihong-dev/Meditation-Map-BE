@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.meditationmap.expert.infrastructure.jpa.ExpertJpaEntity;
 import com.meditationmap.expert.infrastructure.jpa.ExpertSpringDataRepository;
+import com.meditationmap.banner.infrastructure.jpa.BannerJpaEntity;
+import com.meditationmap.banner.infrastructure.jpa.BannerSpringDataRepository;
 import com.meditationmap.notice.infrastructure.jpa.NoticeJpaEntity;
 import com.meditationmap.notice.infrastructure.jpa.NoticeSpringDataRepository;
 import com.meditationmap.place.application.PlaceProgramNormalizer;
@@ -26,6 +28,7 @@ public class AdminCatalogService {
     private final PlaceSpringDataRepository placeRepo;
     private final ExpertSpringDataRepository expertRepo;
     private final NoticeSpringDataRepository noticeRepo;
+    private final BannerSpringDataRepository bannerRepo;
 
     @Transactional(readOnly = true)
     public List<PlaceJpaEntity> listPlaces() {
@@ -123,6 +126,34 @@ public class AdminCatalogService {
         noticeRepo.deleteById(id);
     }
 
+    @Transactional(readOnly = true)
+    public List<BannerJpaEntity> listBanners() {
+        return bannerRepo.findAll();
+    }
+
+    @CacheEvict(value = "banners", allEntries = true)
+    public BannerJpaEntity createBanner(JsonNode payload) {
+        String id = AdminNumericIdGenerator.nextId(bannerRepo.findAll().stream().map(BannerJpaEntity::getId).toList());
+        return saveBanner(id, payload);
+    }
+
+    @CacheEvict(value = "banners", allEntries = true)
+    public BannerJpaEntity updateBanner(String id, JsonNode payload) {
+        validateId(id);
+        if (!bannerRepo.existsById(id)) {
+            throw new InfrastructureException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return saveBanner(id, payload);
+    }
+
+    @CacheEvict(value = "banners", allEntries = true)
+    public void deleteBanner(String id) {
+        if (!bannerRepo.existsById(id)) {
+            throw new InfrastructureException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        bannerRepo.deleteById(id);
+    }
+
     private PlaceJpaEntity savePlace(String id, String regionId, JsonNode data) {
         if (data == null || !data.isObject()) {
             throw new InfrastructureException(ErrorCode.INVALID_REQUEST_BODY);
@@ -163,6 +194,30 @@ public class AdminCatalogService {
         entity.setId(id);
         entity.setPayload(merged);
         return noticeRepo.save(entity);
+    }
+
+    /**
+     * 배너 저장. createdAt 은 처음 만들 때 한 번만 찍고 그대로 둡니다 —
+     * "언제 올린 배너인지" 는 나중에 고쳤다고 바뀌면 안 되는 값이라서입니다.
+     */
+    private BannerJpaEntity saveBanner(String id, JsonNode payload) {
+        if (payload == null || !payload.isObject()) {
+            throw new InfrastructureException(ErrorCode.INVALID_REQUEST_BODY);
+        }
+        ObjectNode merged = ((ObjectNode) payload.deepCopy());
+        merged.put("id", id);
+
+        BannerJpaEntity entity = bannerRepo.findById(id).orElseGet(BannerJpaEntity::new);
+        String now = java.time.OffsetDateTime.now(java.time.ZoneId.of("Asia/Seoul")).toString();
+        JsonNode before = entity.getPayload();
+        String createdAt =
+                before != null && before.hasNonNull("createdAt") ? before.get("createdAt").asText(now) : now;
+        merged.put("createdAt", createdAt);
+        merged.put("updatedAt", now);
+
+        entity.setId(id);
+        entity.setPayload(merged);
+        return bannerRepo.save(entity);
     }
 
     private static void validateId(String id) {

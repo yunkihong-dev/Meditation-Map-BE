@@ -17,6 +17,8 @@ public class LocalCacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager("regions", "places", "place", "experts", "expert");
+        // 이름을 고정해 두는 매니저라, 여기 없는 캐시를 쓰면 "Cannot find cache named …" 로 터집니다.
+        return new ConcurrentMapCacheManager(
+                "regions", "places", "place", "experts", "expert", "notices", "banners");
     }
 }

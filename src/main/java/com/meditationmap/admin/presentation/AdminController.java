@@ -12,6 +12,7 @@ import com.meditationmap.admin.application.HttpTrafficQueryService;
 import com.meditationmap.admin.application.MemberMetricsQueryService;
 import com.meditationmap.admin.presentation.dto.AdminDto;
 import com.meditationmap.expert.infrastructure.jpa.ExpertJpaEntity;
+import com.meditationmap.banner.infrastructure.jpa.BannerJpaEntity;
 import com.meditationmap.notice.infrastructure.jpa.NoticeJpaEntity;
 import com.meditationmap.place.infrastructure.jpa.PlaceJpaEntity;
 import io.swagger.v3.oas.annotations.Operation;
@@ -170,6 +171,29 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "홈 배너 목록 (게시 안 하는 것까지 전부)")
+    @GetMapping("/banners")
+    public List<Map<String, Object>> listBanners() {
+        return catalogService.listBanners().stream().map(this::bannerRow).toList();
+    }
+
+    @PostMapping("/banners")
+    public Map<String, Object> createBanner(@Valid @RequestBody AdminDto.AdminBannerCreateRequest body) {
+        return bannerRow(catalogService.createBanner(body.payload()));
+    }
+
+    @PutMapping("/banners/{id}")
+    public Map<String, Object> updateBanner(
+            @PathVariable String id, @Valid @RequestBody AdminDto.AdminBannerUpdateRequest body) {
+        return bannerRow(catalogService.updateBanner(id, body.payload()));
+    }
+
+    @DeleteMapping("/banners/{id}")
+    public ResponseEntity<Void> deleteBanner(@PathVariable String id) {
+        catalogService.deleteBanner(id);
+        return ResponseEntity.noContent().build();
+    }
+
     private Map<String, Object> placeRow(PlaceJpaEntity e) {
         JsonNode data = e.getData();
         if (data instanceof ObjectNode objectNode) {
@@ -183,6 +207,10 @@ public class AdminController {
         JsonNode data = e.getData();
         String name = data != null && data.has("name") ? data.get("name").asText("") : "";
         return Map.of("id", e.getId(), "name", name, "data", data);
+    }
+
+    private Map<String, Object> bannerRow(BannerJpaEntity e) {
+        return Map.of("id", e.getId(), "payload", e.getPayload());
     }
 
     private Map<String, Object> noticeRow(NoticeJpaEntity e) {
