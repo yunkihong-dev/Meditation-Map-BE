@@ -75,7 +75,7 @@ spring:
 
 server:
   port: 80
-  # nginx 리버스 프록시 뒤에서 X-Forwarded-* 를 신뢰 (OAuth redirect_uri·scheme/host 정확화)
+  # 리버스 프록시(운영은 CloudFront) 뒤에서 X-Forwarded-* 를 신뢰 (OAuth redirect_uri·scheme/host 정확화)
   forward-headers-strategy: framework
 
 management:

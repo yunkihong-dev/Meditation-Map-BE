@@ -1,10 +1,4 @@
 # AWS 운영 프로필.
-#
-# 값은 전부 환경변수로 들어온다. 출처는 두 갈래다.
-#   - 비밀 아님: EC2 의 /opt/app/app.env  (Terraform 이 user_data 로 기록)
-#   - 비밀:      /opt/app/secrets.env     (배포 시 Secrets Manager 에서 받아 씀)
-#
-# 이 파일에는 실제 비밀값이 없어야 한다. 커밋되는 파일이다.
 
 spring:
   jpa:
@@ -22,7 +16,6 @@ spring:
       host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
 
-  # redirect_uri 를 {baseUrl} 로 조립하면 http://api...:443/... 이 된다.
   # CloudFront 가 오리진에 평문 HTTP 로 붙는데 X-Forwarded-Proto 를 주입할 방법이 없어서다.
   # 스킴 추론에 맡기지 않고 절대 주소로 지정한다.
   security:
