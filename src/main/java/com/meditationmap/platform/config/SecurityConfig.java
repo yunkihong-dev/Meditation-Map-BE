@@ -76,8 +76,11 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**")
                                         .permitAll()
+                                        // 지표는 스태프만. 공개해 두면 전체 엔드포인트 목록과 호출·오류 수,
+                                        // DB 커넥션 풀 상태, JVM·톰캣 내부까지 누구나 읽을 수 있어
+                                        // 공격자에게 그대로 정찰 자료가 된다.
                                         .requestMatchers(HttpMethod.GET, "/actuator/prometheus")
-                                        .permitAll()
+                                        .hasAnyRole("ADMIN", "DEV")
                                         .requestMatchers(HttpMethod.GET, "/actuator/info")
                                         .permitAll()
                                         .requestMatchers(
