@@ -31,6 +31,9 @@ public class PlaceSummaryJdbcRepository {
                        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.shortDescription')), '') AS short_description,
                        LEFT(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.description')), ''), 1200) AS description,
                        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.address')), '') AS address,
+                       -- 지도 마커가 쓰는 좌표. 없으면 NULL 로 두고 프런트가 지역 근사 좌표로 떨어진다.
+                       CAST(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.lat')) AS DECIMAL(10, 7)) AS lat,
+                       CAST(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.lng')) AS DECIMAL(10, 7)) AS lng,
                        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.thumbnailUrl')), '') AS thumbnail_url,
                        JSON_EXTRACT(`data`, '$.hashtags') AS hashtags_json,
                        JSON_EXTRACT(`data`, '$.themes') AS themes_json,
@@ -62,6 +65,12 @@ public class PlaceSummaryJdbcRepository {
         n.put("shortDescription", rs.getString("short_description"));
         n.put("description", rs.getString("description"));
         n.put("address", rs.getString("address"));
+        /*
+         * 좌표는 있을 때만 넣는다. 0.0 으로 채워 버리면 프런트가 "좌표 있음" 으로 보고
+         * 아프리카 앞바다에 마커를 찍는다. 없으면 키 자체를 빼서 지역 근사 좌표로 가게 둔다.
+         */
+        putCoordinate(n, "lat", rs, "lat");
+        putCoordinate(n, "lng", rs, "lng");
         n.put("thumbnailUrl", rs.getString("thumbnail_url"));
         n.set("hashtags", readArray(rs.getString("hashtags_json")));
         n.set("themes", readArray(rs.getString("themes_json")));
@@ -85,6 +94,14 @@ public class PlaceSummaryJdbcRepository {
         n.set("instructors", objectMapper.createArrayNode());
         n.set("detailSections", objectMapper.createArrayNode());
         return n;
+    }
+
+    private static void putCoordinate(ObjectNode target, String field, ResultSet rs, String column)
+            throws SQLException {
+        double value = rs.getDouble(column);
+        if (!rs.wasNull() && Double.isFinite(value)) {
+            target.put(field, value);
+        }
     }
 
     private ArrayNode readArray(String json) {

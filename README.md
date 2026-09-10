@@ -18,14 +18,18 @@
 
 `MeditationMapApplication`은 `@EntityScan` / `@EnableJpaRepositories`로 `com.meditationmap` 전역을 스캔합니다(JPA 엔티티는 각 컨텍스트의 `infrastructure.jpa`에만 위치).
 
-### 로컬 실행 (Docker MySQL / Redis)
+### 로컬 실행
+
+의존 서비스(MySQL·Redis)만 Compose로 띄우고, 앱은 gradle로 띄웁니다. Compose에 있던 **nginx·cloudflared·app은 걷어냈습니다** — 운영은 CloudFront가 TLS를 끝내고 EC2의 app 컨테이너에 붙는 구조라 인스턴스에 nginx가 없고(`infra/cloudfront.tf`), 앱 이미지는 CI가 ECR에 올립니다.
 
 맥/윈도우에 **이미 MySQL이 3306을 쓰는 경우**가 많아, Compose는 MySQL을 **호스트 `3307` → 컨테이너 3306**으로만 노출합니다.
 
-1. `docker compose up -d` (저장소 루트 `meditation-map-be/`) — MySQL **3307**, Redis **6379**, MinIO **9000**(API)·**9001**(콘솔), 계정 `minio` / `minio12345`
-2. 앱: `./gradlew bootRun --args='--spring.profiles.active=local'` — DB는 `application-local.yml`, **MinIO는 `app.storage.minio.enabled=true`**
+1. `docker compose up -d` (저장소 루트 `meditation-map-be/`) — MySQL **3307**, Redis **6379**
+2. 앱: `./gradlew bootRun --args='--spring.profiles.active=local --server.port=8080'` — DB는 `application-local.yml`(3307), 캐시는 인메모리(local 프로필은 Redis 자동설정을 끕니다). 기본 포트는 `application.yml`의 **80**인데 맥에서는 특권 포트라 8080으로 띄우는 편이 편합니다.
 3. 프론트: `VITE_API_BASE_URL=http://localhost:8080`
-4. 이미지 등 파일: `POST /storage/objects` (multipart `file`, **JWT 필요**) → 응답 `url`을 place/expert JSON에 넣어 저장하면 됨. 공개 읽기 정책은 로컬 편의용(운영은 presigned 등으로 좁히는 것을 권장).
+4. 이미지 등 파일: `POST /storage/objects` (multipart `file`, **JWT 필요**) → 응답 `url`을 place/expert JSON에 넣어 저장하면 됨. 저장소는 S3이고 로컬은 기본 **꺼져** 있습니다(`STORAGE_ENABLED=false`). 업로드까지 보려면 `.env`에 `STORAGE_ENABLED=true`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`을 채우고 자격증명은 `~/.aws/credentials`를 씁니다.
+
+**호스트에 MySQL·Redis를 이미 깔아 뒀다면** Compose 없이도 됩니다. 프로필 없이 `./gradlew bootRun --args='--server.port=8080'` 으로 띄우면 `.env`의 `DATABASE_URL`(기본 `localhost:3306`)을 그대로 씁니다.
 
 ---
 

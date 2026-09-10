@@ -12,13 +12,3 @@ spring:
 
   datasource:
     url: jdbc:mysql://127.0.0.1:3307/meditation?characterEncoding=utf8&serverTimezone=Asia/Seoul
-
-app:
-  storage:
-    object-storage:
-      # 로컬은 기본 꺼 둔다. 업로드까지 테스트하려면 .env 에 아래를 채운다.
-      #   STORAGE_ENABLED=true
-      #   STORAGE_BUCKET=<개발용 S3 버킷>
-      #   STORAGE_PUBLIC_BASE_URL=https://<개발 CloudFront>/media
-      # 자격증명은 `aws configure` 로 잡아 둔 ~/.aws/credentials 를 그대로 쓴다.
-      enabled: ${STORAGE_ENABLED:false}
