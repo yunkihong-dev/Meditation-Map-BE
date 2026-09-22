@@ -86,6 +86,9 @@ public class MemberProfileApplicationService {
         data.set("regionIds", toArray(request.regionIds()));
         data.set("activityAreas", toArray(request.regionIds()));
         data.put("hasCenter", request.hasCenter());
+        // 전문가 본인의 노출/숨김 토글. 여기서 쓰지 않으면 FE 가 보낸 값이 조용히 버려진다.
+        // 기존 data 는 위에서 deepCopy 로 시작하므로 여기서 명시한 키만 덮어쓰고 나머지는 보존된다.
+        data.put("hidden", request.hidden());
         if (request.hasCenter()) {
             data.put("centerSummary", trimToEmpty(request.centerName()));
             data.put("centerAddress", trimToEmpty(request.centerAddress()));

@@ -32,6 +32,18 @@ public class ExpertSummaryJdbcRepository {
                     "WHERE JSON_CONTAINS(JSON_EXTRACT(`data`, '$.regionIds'), JSON_QUOTE(:regionId), '$')";
             params.addValue("regionId", regionIdRaw);
         }
+        /*
+         * 숨김 처리된 전문가는 공개 목록에서 제외한다. 두 분기 모두에 붙어야 하므로 분기 뒤에
+         * 한 번만 이어 붙인다.
+         *  - hidden 키가 없는 행(운영 데이터 대다수)에서 JSON_EXTRACT 는 SQL NULL 을 돌려주므로
+         *    COALESCE 로 'false' 로 접지 않으면 그 행들이 전부 사라진다.
+         *  - JSON_UNQUOTE 로 문자열화해서 비교하면 boolean true·문자열 "true"·숫자 1 을 모두
+         *    걸러 낸다. JSON 비교(= CAST('true' AS JSON))는 문자열/숫자 형태를 놓친다.
+         * 두 분기 모두 최상위 OR 가 없어 괄호는 필요 없다.
+         */
+        where +=
+                " AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(`data`, '$.hidden')), 'false')"
+                        + " NOT IN ('true', '1')";
 
         String sql =
                 """

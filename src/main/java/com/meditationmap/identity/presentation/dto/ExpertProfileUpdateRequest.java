@@ -17,4 +17,7 @@ public record ExpertProfileUpdateRequest(
         @Size(max = 120) String centerName,
         @Size(max = 300) String centerAddress,
         @Size(max = 20) String businessRegistrationNumber,
-        LocalDate businessOpeningDate) {}
+        LocalDate businessOpeningDate,
+        // 전문가 본인이 고르는 공개/숨김. true 면 공개 목록·지도에서 빠진다.
+        // 키를 아예 보내지 않으면 record 의 boolean 기본값인 false(= 공개)로 해석된다.
+        boolean hidden) {}
