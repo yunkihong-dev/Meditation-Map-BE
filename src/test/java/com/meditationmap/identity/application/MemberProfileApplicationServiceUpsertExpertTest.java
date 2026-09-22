@@ -105,7 +105,70 @@ class MemberProfileApplicationServiceUpsertExpertTest {
         assertThat(saved.get("avatarUrl").asText()).isEqualTo("https://cdn.test/a.png");
     }
 
+    // --- avatarUrl: 관리자 입력과 회원 프로필 이미지, 두 쓰기 경로의 우선순위 ------------------
+
+    @Test
+    @DisplayName("프로필 이미지가 없는 회원이 저장해도 관리자가 넣은 avatarUrl 은 지워지지 않는다")
+    void 이미지_없는_회원_저장이_관리자_avatarUrl_을_지우지_않는다() throws Exception {
+        givenExistingExpertWithAdminAvatar();
+
+        // MeController 는 회원에게 프로필 이미지가 없으면 avatarUrl 을 null 로 넘긴다.
+        JsonNode saved = service.upsertExpert(MEMBER_ID, null, request(false)).getData();
+
+        assertThat(saved.get("avatarUrl").asText()).isEqualTo("https://media.test/admin-set.jpg");
+    }
+
+    @Test
+    @DisplayName("회원 프로필 이미지가 있으면 그것이 관리자 입력보다 우선한다 (현행 유지)")
+    void 회원_이미지가_있으면_그것이_우선한다() throws Exception {
+        givenExistingExpertWithAdminAvatar();
+
+        JsonNode saved =
+                service.upsertExpert(MEMBER_ID, "https://cdn.test/member.png", request(false)).getData();
+
+        assertThat(saved.get("avatarUrl").asText()).isEqualTo("https://cdn.test/member.png");
+    }
+
+    @Test
+    @DisplayName("신규 전문가는 이미지가 없어도 avatarUrl 키가 빈 문자열로 채워진다 (응답 shape 유지)")
+    void 신규_전문가는_avatarUrl_키가_채워진다() {
+        given(expertRepo.findByOwnerMemberId(MEMBER_ID)).willReturn(Optional.empty());
+        willAnswer(invocation -> invocation.getArgument(0))
+                .given(expertRepo)
+                .save(any(ExpertJpaEntity.class));
+
+        JsonNode saved = service.upsertExpert(MEMBER_ID, null, request(false)).getData();
+
+        // 목록 투영·FE 타입이 avatarUrl 키 존재를 전제하므로 키 자체는 남겨야 한다.
+        assertThat(saved.has("avatarUrl")).isTrue();
+        assertThat(saved.get("avatarUrl").asText()).isEmpty();
+    }
+
     // --- fixtures ------------------------------------------------------------------------
+
+    /** 관리자 콘솔(AdminExpertsPage)에서 아바타 URL 을 직접 입력해 둔 전문가. */
+    private void givenExistingExpertWithAdminAvatar() throws Exception {
+        ExpertJpaEntity existing = new ExpertJpaEntity();
+        existing.setId(MEMBER_ID);
+        existing.setOwnerMemberId(MEMBER_ID);
+        existing.setData(
+                objectMapper.readTree(
+                        """
+                        {
+                          "id": "%s",
+                          "name": "예전 이름",
+                          "avatarUrl": "https://media.test/admin-set.jpg",
+                          "programs": [],
+                          "reviews": []
+                        }
+                        """
+                                .formatted(MEMBER_ID)));
+
+        given(expertRepo.findByOwnerMemberId(MEMBER_ID)).willReturn(Optional.of(existing));
+        willAnswer(invocation -> invocation.getArgument(0))
+                .given(expertRepo)
+                .save(any(ExpertJpaEntity.class));
+    }
 
     private void givenExistingExpert() throws Exception {
         ExpertJpaEntity existing = new ExpertJpaEntity();
