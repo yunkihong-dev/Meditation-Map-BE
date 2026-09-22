@@ -32,6 +32,20 @@ spring:
 server:
   port: ${SERVER_PORT:80}
   forward-headers-strategy: framework
+  tomcat:
+    accesslog:
+      # 요청 한 줄씩 — 누가(IP) 언제 무엇을 얼마나 걸려 받아 갔는지.
+      # 파일 대신 컨테이너 stdout(/dev/stdout)으로 내보내 앱 로그와 같은 CloudWatch 스트림(app)에 섞습니다.
+      # 앞의 IP 는 CloudFront 가 넘겨주는 X-Forwarded-For 입니다 — 원본에는 CloudFront 만 닿으므로
+      # 접속 IP(%a)를 찍으면 전부 CloudFront 로 나옵니다. 값이 "a, b" 꼴이면 마지막이 CloudFront 가 본 IP.
+      enabled: true
+      directory: /dev
+      prefix: stdout
+      suffix: ""
+      file-date-format: ""
+      rotate: false
+      buffered: false
+      pattern: '%{X-Forwarded-For}i %t "%r" %s %B %{ms}Tms "%{User-Agent}i"'
 
 management:
   endpoints:

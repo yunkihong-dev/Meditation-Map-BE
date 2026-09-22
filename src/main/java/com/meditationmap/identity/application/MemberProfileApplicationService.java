@@ -77,7 +77,17 @@ public class MemberProfileApplicationService {
         data.put("id", expert.getId());
         data.put("name", request.name().trim());
         data.put("intro", request.intro().trim());
-        data.put("avatarUrl", avatarUrl != null ? avatarUrl : "");
+        /*
+         * avatarUrl 은 두 경로가 쓴다 — 관리자 콘솔의 직접 입력과 회원의 프로필 이미지(여기 인자).
+         * 회원 이미지가 있으면 그것이 우선하지만, 없다고(null) 빈 문자열로 덮어쓰면 관리자가
+         * 넣어 둔 URL 이 회원의 소개글 저장 한 번에 조용히 지워진다. 없을 때는 기존 값을 두고,
+         * 키 자체가 없는 신규 전문가만 "" 로 채워 응답 shape(16키)을 유지한다.
+         */
+        if (avatarUrl != null) {
+            data.put("avatarUrl", avatarUrl);
+        } else if (!data.hasNonNull("avatarUrl")) {
+            data.put("avatarUrl", "");
+        }
         data.set("degrees", toArray(request.degrees()));
         data.set("certificates", toArray(request.certificates()));
         data.set("careers", toArray(request.careers()));
@@ -86,6 +96,9 @@ public class MemberProfileApplicationService {
         data.set("regionIds", toArray(request.regionIds()));
         data.set("activityAreas", toArray(request.regionIds()));
         data.put("hasCenter", request.hasCenter());
+        // 전문가 본인의 노출/숨김 토글. 여기서 쓰지 않으면 FE 가 보낸 값이 조용히 버려진다.
+        // 기존 data 는 위에서 deepCopy 로 시작하므로 여기서 명시한 키만 덮어쓰고 나머지는 보존된다.
+        data.put("hidden", request.hidden());
         if (request.hasCenter()) {
             data.put("centerSummary", trimToEmpty(request.centerName()));
             data.put("centerAddress", trimToEmpty(request.centerAddress()));
