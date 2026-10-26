@@ -79,6 +79,10 @@ app:
     phone:
       sms-provider: ${PHONE_SMS_PROVIDER:naver}
 
+  notification:
+    # FCM 푸시 클릭 시 열 웹 주소. 운영에서 env 를 빠뜨려도 localhost 로 열리지 않게 운영 도메인을 기본값으로 둔다(QA Q5).
+    web-base-url: ${NOTIFICATION_WEB_BASE_URL:https://healingmedit.kr}
+
 logging:
   level:
     root: INFO

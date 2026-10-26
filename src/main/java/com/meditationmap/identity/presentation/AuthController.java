@@ -132,10 +132,11 @@ public class AuthController {
         return writeToken(response, token);
     }
 
-    @Operation(summary = "로그아웃 (인증 쿠키 삭제)")
+    @Operation(summary = "로그아웃 (인증 쿠키 삭제 + 서버 세션 무효화·JSESSIONID 만료)")
     @PostMapping("/logout")
-    public void logout(HttpServletResponse response) {
+    public void logout(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
         authCookieWriter.clearAccessTokenCookie(response);
+        authCookieWriter.endSession(request, response);
     }
 
     private TokenResponse writeToken(HttpServletResponse response, AccessTokenIssuer.IssuedToken token) {

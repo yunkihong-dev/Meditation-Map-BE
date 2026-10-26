@@ -49,6 +49,9 @@ dependencies {
     implementation platform('software.amazon.awssdk:bom:2.29.51')
     implementation 'software.amazon.awssdk:s3'
 
+    // FCM HTTP v1 발송(웹 푸시). 키가 없으면(PUSH_PROVIDER=log) SDK 는 로드만 되고 쓰이지 않는다.
+    implementation 'com.google.firebase:firebase-admin:9.4.3'
+
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'

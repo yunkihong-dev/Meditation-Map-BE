@@ -42,6 +42,23 @@ public class AuthCookieWriter {
         clearCookie(response, ACCESS_TOKEN_COOKIE);
     }
 
+    /**
+     * 로그아웃 공통: 서버 세션을 무효화하고 JSESSIONID 를 만료시킨다. 인증은 세션에 두지 않지만(SecurityConfig), 예전 버전이
+     * 만든 인증 세션이 남아 있을 수 있고 OAuth2 인가 요청 세션도 로그아웃 뒤 남길 이유가 없다.
+     */
+    public void endSession(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            try {
+                session.invalidate();
+            } catch (IllegalStateException ignored) {
+                // 이미 무효화됨
+            }
+        }
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        clearCookie(response, "JSESSIONID");
+    }
+
     public void writeAdminAccessTokenCookie(HttpServletResponse response, String token) {
         writeCookie(response, ADMIN_ACCESS_TOKEN_COOKIE, token);
     }

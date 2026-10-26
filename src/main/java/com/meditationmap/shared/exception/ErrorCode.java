@@ -61,6 +61,31 @@ public enum ErrorCode {
     EXTERNAL_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "외부 서비스(스토리지 등) 호출 중 오류가 발생했습니다."),
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 예기치 않은 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."),
+
+    // --- 장소 소유 신청 · 오너 수정 (계약 10절) ---
+    PLACE_ALREADY_OWNED(HttpStatus.CONFLICT, "이미 승인된 오너가 있는 장소예요."),
+    PLACE_CLAIM_ALREADY_PENDING(HttpStatus.CONFLICT, "이 장소에 대한 신청이 이미 검토 중이에요."),
+    PLACE_CLAIM_ALREADY_REVIEWED(HttpStatus.CONFLICT, "이미 처리된 신청이에요."),
+    PLACE_NOT_OWNER(HttpStatus.FORBIDDEN, "이 장소를 수정할 권한이 없어요."),
+    PLACE_OWNER_FIELD_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "오너가 수정할 수 없는 항목이 포함되어 있어요."),
+    CLAIM_EVIDENCE_TYPE_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST, "증빙 파일은 이미지(JPG·PNG·WEBP·HEIC) 또는 PDF만 올릴 수 있어요."),
+    FILE_STORAGE_DISABLED(HttpStatus.SERVICE_UNAVAILABLE, "파일 저장소가 비활성화되어 있어요."),
+
+    // --- 알림 · 광고 발송 (계약 10절) ---
+    INVALID_LINK_URL(HttpStatus.BAD_REQUEST, "링크는 서비스 내부 경로(/로 시작)만 쓸 수 있어요."),
+    BROADCAST_NO_RECIPIENTS(HttpStatus.BAD_REQUEST, "발송 대상 회원이 없어요."),
+    BROADCAST_DUPLICATE(HttpStatus.CONFLICT, "이미 처리된 발송 요청이에요."),
+    BROADCAST_QUIET_HOURS(HttpStatus.BAD_REQUEST, "야간(21시~8시)에는 광고 알림을 보낼 수 없어요."),
+
+    // --- 센터 1:1 문의 채팅 (채팅 계약 C9) ---
+    CENTER_CHAT_UNAVAILABLE(HttpStatus.CONFLICT, "지금은 이 센터에 문의할 수 없어요."),
+    CENTER_CHAT_SELF_INQUIRY(HttpStatus.BAD_REQUEST, "내가 관리하는 센터에는 문의할 수 없어요."),
+    CENTER_CHAT_PROGRAM_NOT_FOUND(HttpStatus.BAD_REQUEST, "선택한 프로그램을 찾을 수 없어요."),
+    CENTER_CHAT_BLOCKED(HttpStatus.CONFLICT, "운영 정책에 따라 이 대화는 더 이상 이용할 수 없어요."),
+    CENTER_CHAT_IMAGE_TYPE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "사진은 JPG·PNG·WEBP만 보낼 수 있어요."),
+    CENTER_CHAT_REPORT_ALREADY_PENDING(HttpStatus.CONFLICT, "이 대화에 대한 신고가 이미 접수되어 검토 중이에요."),
+    CENTER_CHAT_REPORT_ALREADY_RESOLVED(HttpStatus.CONFLICT, "이미 처리된 신고예요."),
     ;
 
     private final HttpStatus httpStatus;

@@ -44,6 +44,10 @@ public class HttpTrafficRecordingFilter extends OncePerRequestFilter {
         if (uri == null) {
             return false;
         }
+        // SSE 스트림은 재연결마다 잡혀 API 호출 수를 부풀린다.
+        if (uri.endsWith("/notifications/stream") || (uri.startsWith("/places/") && uri.endsWith("/views"))) {
+            return false;
+        }
         return !uri.startsWith("/actuator")
                 && !uri.startsWith("/swagger-ui")
                 && !uri.startsWith("/v3/api-docs");

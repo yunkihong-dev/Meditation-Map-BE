@@ -3,6 +3,7 @@ package com.meditationmap.platform.config;
 import com.meditationmap.identity.infrastructure.security.JwtAuthenticationFilter;
 import com.meditationmap.identity.infrastructure.security.NaverAwareOAuth2UserService;
 import com.meditationmap.identity.infrastructure.security.OAuth2LoginSuccessHandler;
+import jakarta.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +19,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -61,7 +64,18 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(
+                        sm ->
+                                sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                                        // 세션 고정 방어 전략을 돌리지 않는다. 인증을 세션에 두지 않으므로 바꿀 세션 신원이 없다.
+                                        .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy()))
+                // 인증은 요청마다 JWT 쿠키로만 세운다. 세션(JSESSIONID)에는 SecurityContext 를 저장하지 않는다.
+                // 예전에는 SessionManagementFilter 가 JWT 필터가 세운 인증을 HttpSession 에 저장해서, 로그아웃(토큰 쿠키 삭제)
+                // 뒤에도 JSESSIONID 하나로 로그인 상태가 유지됐다(AuthSessionLogoutTest).
+                // 세션 자체는 OAuth2 인가 요청(state) 저장에만 쓰인다(HttpSessionOAuth2AuthorizationRequestRepository).
+                .securityContext(sc -> sc.securityContextRepository(new RequestAttributeSecurityContextRepository()))
+                // 미인증 요청을 세션에 저장해 두는 요청 캐시는 쓰지 않는다(성공 핸들러가 SavedRequest 를 쓰지 않음) — 빈 세션 생성 방지.
+                .requestCache(rc -> rc.disable())
                 .exceptionHandling(
                         ex ->
                                 ex.authenticationEntryPoint(
@@ -70,7 +84,12 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         auth ->
-                                auth.requestMatchers(HttpMethod.OPTIONS, "/**")
+                                // SSE(SseEmitter) 완료·타임아웃 시점의 ASYNC 재디스패치와 오류 디스패치는 인가하지 않는다.
+                                // JwtAuthenticationFilter 는 OncePerRequestFilter 라 재디스패치에서 다시 돌지 않아
+                                // 이 디스패치는 익명으로 보인다. 최초 REQUEST 디스패치의 인가는 아래 규칙 그대로다.
+                                auth.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
+                                        .permitAll()
+                                        .requestMatchers(HttpMethod.OPTIONS, "/**")
                                         .permitAll()
                                         .requestMatchers("/oauth2/**", "/login/oauth2/**")
                                         .permitAll()
@@ -94,6 +113,9 @@ public class SecurityConfig {
                                         .requestMatchers(HttpMethod.GET, "/auth/email/availability")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/places", "/places/**")
+                                        .permitAll()
+                                        // 장소 상세 조회 비콘(비로그인 포함). 중복·봇 억제는 PlaceViewRecorder 가 한다.
+                                        .requestMatchers(HttpMethod.POST, "/places/*/views")
                                         .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/regions", "/regions/**")
                                         .permitAll()
