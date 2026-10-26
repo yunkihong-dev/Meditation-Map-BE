@@ -152,6 +152,22 @@ app:
   cache:
     default-ttl-seconds: 600
 
+  # 알림(SSE·FCM) — 계약 11절. FCM 서비스 계정은 시크릿이라 env 로만 주입하고 커밋하지 않는다.
+  notification:
+    # FCM 알림 클릭 시 열 웹 주소 base. 운영: https://healingmedit.kr
+    web-base-url: ${NOTIFICATION_WEB_BASE_URL:http://localhost:3000}
+    sse:
+      timeout-ms: 1800000
+      # CloudFront origin_read_timeout(60초)보다 짧아야 스트림이 끊기지 않는다.
+      heartbeat-ms: 25000
+      max-connections-per-member: 5
+    push:
+      # log(기본, 키 없이 기동 — [PUSH:LOG] 한 줄만 남김) | fcm(실발송, 아래 두 값 필수 — 비면 기동 실패)
+      provider: ${PUSH_PROVIDER:log}
+    fcm:
+      project-id: ${FCM_PROJECT_ID:}
+      credentials-base64: ${FCM_SERVICE_ACCOUNT_JSON_BASE64:}
+
 logging:
   # 파일 경로는 LOG_FILE 로 덮어씁니다. 운영에서는 컨테이너 밖으로 빼낸 경로를 넣습니다.
   file:

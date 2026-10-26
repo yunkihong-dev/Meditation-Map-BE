@@ -11,6 +11,10 @@ public interface MemberFavoritePlaceSpringDataRepository
 
     List<MemberFavoritePlaceJpaEntity> findAllById_MemberIdOrderByCreatedAtAsc(String memberId);
 
+    /** 엔티티를 영속성 컨텍스트에 올리지 않고 ID 만 본다(뒤이은 벌크 삭제 + 재삽입이 merge→UPDATE 로 꼬이지 않게). */
+    @Query("select f.id.placeId from MemberFavoritePlaceJpaEntity f where f.id.memberId = :memberId")
+    List<String> findPlaceIdsByMemberId(@Param("memberId") String memberId);
+
     @Modifying
     @Query("delete from MemberFavoritePlaceJpaEntity f where f.id.memberId = :memberId")
     void deleteAllForMember(@Param("memberId") String memberId);

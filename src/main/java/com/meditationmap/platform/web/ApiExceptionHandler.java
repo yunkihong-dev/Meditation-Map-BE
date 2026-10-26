@@ -2,7 +2,11 @@ package com.meditationmap.platform.web;
 
 import com.meditationmap.platform.web.error.ApiErrorResponse;
 import com.meditationmap.shared.domain.DomainException;
+import com.meditationmap.shared.exception.DetailedDomainException;
 import com.meditationmap.shared.exception.ErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
@@ -10,6 +14,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +28,8 @@ import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
@@ -38,7 +46,69 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> domain(DomainException ex) {
         ErrorCode ec = ex.getErrorCode();
         log.debug("DomainException {}", ec.code(), ex);
+        if (ex instanceof DetailedDomainException detailed && !detailed.getDetails().isEmpty()) {
+            return ResponseEntity.status(ec.getHttpStatus())
+                    .body(ApiErrorResponse.from(ec, detailed.getDetails()));
+        }
         return ResponseEntity.status(ec.getHttpStatus()).body(ApiErrorResponse.from(ec));
+    }
+
+    /**
+     * SSE(SseEmitter) 가 서버 타임아웃으로 끝날 때. 스트림은 이미 {@code text/event-stream} 으로 커밋돼 있어
+     * JSON 을 쓰면 2차 예외가 난다. 아무것도 쓰지 않고 끝낸다.
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public void asyncTimeout(AsyncRequestTimeoutException ex, HttpServletResponse response) {
+        log.debug("Async request timed out (SSE 종료)");
+        if (!response.isCommitted()) {
+            response.setStatus(HttpStatus.NO_CONTENT.value());
+        }
+    }
+
+    /** 클라이언트가 스트림 도중 연결을 끊음(탭 닫기 등). 정상 상황이라 debug 로만 남긴다. */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void asyncNotUsable(AsyncRequestNotUsableException ex) {
+        log.debug("Async response no longer usable (client gone): {}", ex.getMessage());
+    }
+
+    /**
+     * SSE 도중 클라이언트가 끊으면 다음 전송(알림·하트비트)에서 {@code Broken pipe} 가 나고, 비동기 재디스패치로 여기까지 온다.
+     * 이미 {@code text/event-stream} 으로 커밋된 응답이라 JSON 을 쓸 수 없다. 정상 상황이므로 debug 로만 남기고 끝낸다.
+     */
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiErrorResponse> io(
+            IOException ex, HttpServletRequest request, HttpServletResponse response) {
+        if (response.isCommitted() || isEventStream(request, response) || isClientAbort(ex)) {
+            log.debug("Client connection closed: {}", ex.toString());
+            return null;
+        }
+        log.error("처리되지 않은 예외", ex);
+        return body(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    private static boolean isEventStream(HttpServletRequest request, HttpServletResponse response) {
+        String ct = response.getContentType();
+        if (ct != null && ct.startsWith(MediaType.TEXT_EVENT_STREAM_VALUE)) {
+            return true;
+        }
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.contains(MediaType.TEXT_EVENT_STREAM_VALUE);
+    }
+
+    private static boolean isClientAbort(Throwable ex) {
+        Throwable c = ex;
+        int i = 0;
+        while (c != null && i++ < 8) {
+            if (c.getClass().getSimpleName().equals("ClientAbortException")) {
+                return true;
+            }
+            String m = c.getMessage();
+            if (m != null && (m.contains("Broken pipe") || m.contains("Connection reset"))) {
+                return true;
+            }
+            c = c.getCause();
+        }
+        return false;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

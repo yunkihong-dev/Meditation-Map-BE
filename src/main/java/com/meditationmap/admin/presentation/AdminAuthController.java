@@ -53,7 +53,8 @@ public class AdminAuthController {
 
     @Operation(summary = "관리자 로그아웃")
     @PostMapping("/logout")
-    public void logout(HttpServletResponse response) {
+    public void logout(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
         authCookieWriter.clearAdminAccessTokenCookie(response);
+        authCookieWriter.endSession(request, response);
     }
 }

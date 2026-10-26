@@ -25,6 +25,9 @@ public interface MemberSpringDataRepository extends JpaRepository<MemberJpaEntit
 
     long countByRole(MemberRole role);
 
+    @Query("select m.id from MemberJpaEntity m where m.role = :role")
+    List<String> findIdsByRole(@Param("role") MemberRole role);
+
     long countByRoleAndCreatedAtBefore(MemberRole role, Instant createdAt);
 
     @Query(

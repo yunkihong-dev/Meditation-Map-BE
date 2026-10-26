@@ -11,7 +11,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 
 /**
  * 브라우저 주소창 네비게이션(text/html)은 SPA 로그인·가입 화면으로 보내고,
- * API(fetch, Accept: application/json 등)는 401 JSON 을 유지합니다.
+ * API(fetch, Accept: application/json 등)와 SSE(Accept: text/event-stream)는 401 JSON 을 유지합니다.
  */
 public final class SpaUnauthorizedEntryPoint implements AuthenticationEntryPoint {
 
@@ -40,6 +40,11 @@ public final class SpaUnauthorizedEntryPoint implements AuthenticationEntryPoint
     private static boolean wantsJsonResponse(HttpServletRequest request) {
         String accept = request.getHeader("Accept");
         if (accept != null && accept.contains(MediaType.APPLICATION_JSON_VALUE)) {
+            return true;
+        }
+        // EventSource 는 Accept: text/event-stream 을 보낸다. 302 로 SPA HTML 을 주면 브라우저가 MIME 불일치로
+        // 재연결을 영구히 포기하고 원인도 보이지 않는다 → 401 JSON 으로 응답한다.
+        if (accept != null && accept.contains(MediaType.TEXT_EVENT_STREAM_VALUE)) {
             return true;
         }
         String xrw = request.getHeader("X-Requested-With");
